@@ -1,0 +1,33 @@
+{
+  "name": "boletas_cba-tarija",
+  "version": "1.0.0",
+  "description": "Backend para proyecto Boletas-CBA",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "CBA",
+    "Tarija",
+    "Backend"
+  ],
+  "author": "CBA-Tarija",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.11",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.0",
+    "pg": "^8.11.5",
+    "pgtools": "^1.0.1",
+    "sequelize": "^6.37.3",
+    "xlsx": "^0.18.5"
+  }
+}
