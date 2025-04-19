@@ -24,13 +24,7 @@ module.exports = {
   },
   getRecordsByUser: async (req, res) => {
     try {
-      const userId = req.params.userId;
-      const { records, applications } = await getRecordsByUser(userId);
-      res.status(200).json({
-        success: true,
-        records: records,
-        applications: applications,
-      });
+      await getRecordsByUser(req, res);
     } catch (error) {
       getErrorResponse(error, res);
     }

@@ -39,29 +39,66 @@ module.exports = {
       return { success: false, error: error.message };
     }
   },
-  getAllRecords: async () => {
+  getAllRecords: async (req, res) => {
     try {
-      const records = await Record.findAll();
-      return records;
+      // 1. Leer page y limit de la query, con valores por defecto
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
+  
+      // 2. Consulta paginada y total de registros
+      const { count, rows: records } = await Record.findAndCountAll({
+        offset,
+        limit,
+        order: [['date', 'DESC']], // Opcional: ordena por fecha descendente
+      });
+  
+      // 3. Respuesta con datos y total
+      return res.json({
+        records,
+        total: count,
+        page,
+        limit,
+      });
     } catch (error) {
-      return error;
+      return res.status(500).json({ error: error.message });
     }
   },
-  getRecordsByUser: async (userId) => {
+  // getAllRecords: async () => {
+  //   try {
+  //     const records = await Record.findAll();
+  //     return records;
+  //   } catch (error) {
+  //     return error;
+  //   }
+  // },
+  getRecordsByUser: async (req, res) => {
     try {
-      const records = await Record.findAll({
-        where: {
-          userId: userId,
-        },
+      const userId = req.params.userId;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
+
+      const { count, rows: records } = await Record.findAndCountAll({
+        where: { userId },
+        offset,
+        limit,
+        order: [['date', 'DESC']],
       });
+
       const applications = await Application.findAll({
-        where: {
-          userId: userId,
-        },
+        where: { userId },
       });
-      return { records, applications };
+
+      return res.json({
+        records,
+        // applications,
+        total: count,
+        page,
+        limit,
+      });
     } catch (error) {
-      return error;
+      return res.status(500).json({ error: error.message });
     }
   },
   getActiveRecordsByUser: async (userId) => {

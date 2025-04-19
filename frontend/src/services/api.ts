@@ -1,4 +1,5 @@
 import { config } from '../config/config';
+import type { AttendanceRecord } from '../components/tables/AttendanceTable';
 import { LoginResponse, LoginCredentials } from '../types/auth';
 
 interface RequestOptions extends RequestInit {
@@ -48,6 +49,17 @@ class ApiService {
     return this.request(config.endpoints.auth.logout, {
       method: 'POST',
       token
+    });
+  }
+
+  async getAttendanceByUser(userId: string, page?: number, limit?: number): Promise<AttendanceRecord[] | { records: AttendanceRecord[], total?: number }> {
+    let endpoint = config.endpoints.auth.getAttendanceByUser.replace(":id", userId);
+    const params: string[] = [];
+    if (page !== undefined) params.push(`page=${page}`);
+    if (limit !== undefined) params.push(`limit=${limit}`);
+    if (params.length > 0) endpoint += `?${params.join('&')}`;
+    return this.request<AttendanceRecord[] | { records: AttendanceRecord[], total?: number }>(endpoint, {
+      method: 'GET',
     });
   }
 
