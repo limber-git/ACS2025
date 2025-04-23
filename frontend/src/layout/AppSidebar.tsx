@@ -37,6 +37,11 @@ const navItems: NavItem[] = [
     path: "/attendance",
   },
   {
+    icon: <ListIcon />,
+    name: "Applications",
+    path: "/applications",
+  },
+  {
     icon: <CalenderIcon />,
     name: "Calendar",
     path: "/calendar",
@@ -313,7 +318,7 @@ const AppSidebar: React.FC = () => {
             <>
               <img
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
+                src="/images/logo/cba_bar.png"
                 alt="Logo"
                 width={150}
                 height={40}

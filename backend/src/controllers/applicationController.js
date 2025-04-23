@@ -80,6 +80,73 @@ module.exports = {
       throw new Error("Internal Server Error");
     }
   },
+  getApplicationsByUserId: async (userId, page = 1, limit = 10) => {
+    try {
+      // Validate and sanitize input
+      const validatedPage = Math.max(1, parseInt(page));
+      const validatedLimit = Math.min(50, Math.max(1, parseInt(limit))); // Cap at 50 items per page
+      const offset = (validatedPage - 1) * validatedLimit;
+
+      console.log('Controller - Fetching applications with:', {
+        userId,
+        page: validatedPage,
+        limit: validatedLimit,
+        offset
+      });
+      
+      // Get paginated results and total count
+      const { count, rows } = await Application.findAndCountAll({
+        where: { userId },
+        order: [['regularDate', 'DESC']], // Sort by date, newest first
+        limit: validatedLimit,
+        offset: offset
+      });
+
+      // Map the results to our response format
+      const records = rows.map(app => ({
+        applicationId: app.applicationId,
+        type: app.type,
+        status: app.status,
+        submissionDate: app.regularDate,
+        reason: app.reason,
+        reviewDate: app.reviewDate,
+        regularTime: app.regularTime,
+        time: app.time,
+        state: app.state,
+        by: app.by,
+        suggestion: app.suggestion
+      }));
+
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(count / validatedLimit);
+      const hasNextPage = validatedPage < totalPages;
+      const hasPreviousPage = validatedPage > 1;
+
+      console.log('Controller - Pagination info:', {
+        total: count,
+        totalPages,
+        currentPage: validatedPage,
+        hasNextPage,
+        hasPreviousPage
+      });
+      
+      return {
+        success: true,
+        records,
+        pagination: {
+          total: count,
+          totalPages,
+          currentPage: validatedPage,
+          pageSize: validatedLimit,
+          hasNextPage,
+          hasPreviousPage
+        }
+      };
+    } catch (error) {
+      throw new Error("Error fetching applications by user ID: " + error.message);
+    }
+  },
+
   getApplicationsCountForCurrentMonthById: async (userId) => {
     try {
       // Obtener el primer y último día del mes actual como objetos Date

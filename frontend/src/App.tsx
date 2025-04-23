@@ -21,6 +21,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Applications from "./pages/Applications/Applications";
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/attendance" element={<Attendance />} />
+            <Route path="/applications" element={<Applications />} />
             <Route path="/blank" element={<Blank />} />
 
             {/* Forms */}

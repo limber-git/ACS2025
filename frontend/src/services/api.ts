@@ -1,5 +1,6 @@
 import { config } from '../config/config';
 import type { AttendanceRecord } from '../components/tables/AttendanceTable';
+import type { Application } from '../components/tables/ApplicationsTable';
 import { LoginResponse, LoginCredentials } from '../types/auth';
 
 interface RequestOptions extends RequestInit {
@@ -63,7 +64,31 @@ class ApiService {
     });
   }
 
-  // Aquí puedes agregar más métodos para otros endpoints
+  async getApplicationsByUser(
+    userId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    records: Application[],
+    pagination: {
+      total: number;
+      totalPages: number;
+      currentPage: number;
+      pageSize: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    }
+  }> {
+    const endpoint = config.endpoints.auth.getApplicationsByUser.replace(":id", userId);
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    return this.request(endpoint + '?' + params.toString(), {
+      method: 'GET'
+    });
+  }
 }
 
 export const api = new ApiService();

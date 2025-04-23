@@ -1,4 +1,4 @@
-const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange } = require("../controllers/applicationController")
+const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange, getApplicationsByUserId } = require("../controllers/applicationController")
 
 module.exports = {
     postApplication: async (req, res) => {
@@ -66,6 +66,30 @@ module.exports = {
             });
         }
     },
+    getApplicationsByUserId: async (req, res) => {
+        try {
+            const { userId } = req.params;
+            const page = req.query.page ? parseInt(req.query.page) : 1;
+            const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+
+            console.log('Handler - Processing request:', {
+                userId,
+                page,
+                limit,
+                query: req.query
+            });
+            
+            const result = await getApplicationsByUserId(userId, page, limit);
+            console.log('Handler - Successfully retrieved applications');
+            res.status(200).json(result);
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message || error
+            });
+        }
+    },
+
     getApplicationsCountForCurrentMonthById: async (req, res) => {
         try {
             const userId = req.params.userId;  // Obtener el ID de usuario de los parámetros de la ruta

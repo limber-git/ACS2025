@@ -5,7 +5,8 @@ export const config = {
       login: '/user/login',
       logout: '/user/logout',
       verify: '/user/verify',
-      getAttendanceByUser: '/record/getRecordsByUser/:id'
+      getAttendanceByUser: '/record/getRecordsByUser/:id',
+      getApplicationsByUser: '/application/getApplicationsByUser/:id'
     },
     // Aquí puedes agregar más endpoints organizados por funcionalidad
   }
