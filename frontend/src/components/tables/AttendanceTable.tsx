@@ -1,5 +1,5 @@
 import Button from "../ui/button/Button";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import TableSkeleton from "./TableSkeleton";
 
 export interface AttendanceRecord {
   recordId: string;
@@ -95,7 +96,7 @@ export default function AttendanceTable() {
   }, [user]);
 
   if (loading) {
-    return <div className="p-4 text-center">Cargando registros de asistencia...</div>;
+    return <TableSkeleton />;
   }
 
   if (error) {
@@ -156,8 +157,8 @@ export default function AttendanceTable() {
                   {formatDateEnglish(record.date)}
                 </TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-  {extractHour(record.timeTable)}
-</TableCell>
+                  {extractHour(record.timeTable)}
+                </TableCell>
                 <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
                   {record.clockIn}
                 </TableCell>
@@ -179,22 +180,29 @@ export default function AttendanceTable() {
         </Table>
       </div>
       {/* Controles de paginación */}
-      <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
+      <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100 sm:justify-around">
         <div>
-          Page {page} {total ? `of ${Math.ceil(total / limit)}` : ''}
+          <span className="hidden sm:inline">Page</span> {page}
+          {total ? (
+            <>
+              <span className="hidden sm:inline"> of </span>
+              <span className="sm:hidden">-</span> {/* Guion solo en pantallas pequeñas */}
+              {Math.ceil(total / limit)}
+            </>
+          ) : ''}
         </div>
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant="outline"
+            variant="primary"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
           >
-            Previous
+            Prev
           </Button>
           <Button
             size="sm"
-            variant="outline"
+            variant="primary"
             onClick={() => setPage((p) => (total ? (p < Math.ceil(total / limit) ? p + 1 : p) : p + 1))}
             disabled={!!total && page >= Math.ceil(total / limit) || loading}
           >
@@ -203,9 +211,9 @@ export default function AttendanceTable() {
         </div>
         <div>
           <label>
-            Pages:
+            <span className="hidden sm:inline">Pages:</span>
             <select
-              className="ml-2 border rounded px-2 py-1"
+              className="ml-2 border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
               value={limit}
               onChange={e => { setPage(1); setLimit(Number(e.target.value)); }}
               disabled={loading}
