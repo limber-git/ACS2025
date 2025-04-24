@@ -1,6 +1,6 @@
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
-import ApplicationsTable from "../../components/tables/ApplicationsTable";
+import ApplicationsTable from "../../components/tables/ApplicationsTables/ApplicationsTable";
 
 export default function Applications() {
   return (

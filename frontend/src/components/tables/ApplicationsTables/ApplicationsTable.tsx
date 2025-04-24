@@ -1,30 +1,23 @@
-import Button from "../ui/button/Button";
+import Button from "../../ui/button/Button";
 import { useEffect, useState } from "react";
-import { api } from "../../services/api";
-import { useAuth } from "../../context/AuthContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
-import TableSkeleton from "./TableSkeleton";
+import { api } from "../../../services/api";
+import { useAuth } from "../../../context/AuthContext";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../ui/table";
+import TableSkeleton from "../AttendanceTables/TableSkeleton";
 
-export interface AttendanceRecord {
-  recordId: string;
-  name: string;
-  date: string;
-  timeTable: string;
-  onDuty: string;
-  offDuty: string;
-  clockIn: string;
-  clockOut: string;
-}
-
-function extractHour(timeTable: string) {
-  const parts = timeTable.split(' ');
-  return parts.length > 1 ? parts[1] : timeTable;
+export interface Application {
+  id: number;
+  recordId: number;
+  type: string;
+  status: string;
+  submissionDate: string;
+  reason: string;
+  reviewDate: string | null;
+  regularTime: string;
+  time: string;
+  state: string;
+  by: string | null;
+  suggestion: string | null;
 }
 
 function formatDateEnglish(dateStr: string) {
@@ -37,148 +30,121 @@ function formatDateEnglish(dateStr: string) {
   });
 }
 
-export default function AttendanceTable() {
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+export default function ApplicationsTable() {
+  const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [limit, setLimit] = useState(5);
   const [total, setTotal] = useState<number | null>(null);
-  const [cache, setCache] = useState<Record<string, { records: AttendanceRecord[]; total: number | null }>>({});
+  const [pagination, setPagination] = useState<{
+    total: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  } | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
-    const fetchRecords = async () => {
+    const fetchApplications = async () => {
+      // console.log('Fetching applications...');
       const userId = user?.userId;
+      // console.log('User ID:', userId);
       if (!userId) {
         setError("No se encontró el usuario logueado.");
         setLoading(false);
         return;
       }
-      const cacheKey = `${page}-${limit}`;
-      // Si la página está en cache, úsala y no hagas la petición
-      if (cache[cacheKey]) {
-        setRecords(cache[cacheKey].records);
-        setTotal(cache[cacheKey].total);
-        setLoading(false);
-        return;
-      }
+
       try {
         setLoading(true);
-        const response = await api.getAttendanceByUser(userId.toString(), page, limit);
-        // console.log("response", response);
-        let newRecords: AttendanceRecord[] = [];
-        let newTotal: number | null = null;
-        if (Array.isArray(response)) {
-          newRecords = response;
-          newTotal = null;
-        } else {
-          newRecords = response.records || [];
-          newTotal = response.total ?? null;
-        }
-        setRecords(newRecords);
-        setTotal(newTotal);
-        setCache(prev => ({ ...prev, [cacheKey]: { records: newRecords, total: newTotal } }));
+        // console.log('Fetching applications:', { userId, page, pageSize });
+        const response = await api.getApplicationsByUser(userId.toString(), page, pageSize);
+        // console.log('API Response:', response);
+
+        setApplications(response.applications);
+        setPagination(response.pagination);
       } catch (error: any) {
-        setError(error.message || "Error al cargar los registros de asistencia.");
+        setError(error.message || "Error al cargar las solicitudes.");
       } finally {
         setLoading(false);
       }
     };
-    fetchRecords();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, page, limit]);
+    fetchApplications();
+  }, [user, page, pageSize]);
 
-  // Si cambias el usuario (logout/login), limpia el cache
-  useEffect(() => {
-    setCache({});
-    setPage(1);
-  }, [user]);
+
 
   if (loading) {
     return <TableSkeleton />;
   }
 
   if (error) {
-    return <div className="p-4 text-center text-red-500">{error}</div>;
+    return <div className="text-red-500">{error}</div>;
   }
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
         <Table>
-          {/* Encabezado */}
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Date
-              </TableCell>
+              >Date</TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Schedule
-              </TableCell>
+              >Type</TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Clock In
-              </TableCell>
+              >Status</TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Clock Out
-              </TableCell>
+              >Regular Time</TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Actions
-              </TableCell>
+              >Time</TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >Revisado por</TableCell>
             </TableRow>
           </TableHeader>
-
-          {/* Cuerpo */}
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="px-5 py-3 text-center text-gray-500">
-                  No hay registros de asistencia.
-                </TableCell>
-              </TableRow>
-            ) : records.map((record) => (
-              <TableRow key={record.recordId}>
+            {applications.map((application) => (
+              <TableRow key={application.id}>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {formatDateEnglish(record.date)}
-                </TableCell>
+                  {formatDateEnglish(application.submissionDate)}</TableCell>
                 <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                  {extractHour(record.timeTable)}
+                  {application.type}</TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium
+                    ${application.status === 'Approved' ? 'bg-success/10 text-success' :
+                      application.status === 'Pending' ? 'bg-danger/10 text-danger' :
+                        'bg-warning/10 text-warning'}`}>
+                    {application.status}
+                  </span>
                 </TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
-                  {record.clockIn}
-                </TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
-                  {record.clockOut}
-                </TableCell>
-                <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-400">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-theme-xs dark:text-theme-dark-xs"
-                  >
-                    Edit
-                  </Button>
-                </TableCell>
+
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {application.regularTime}</TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                  {application.time}</TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{application.by || '-'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
       {/* Controles de paginación */}
       <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100 sm:justify-around">
         <div>

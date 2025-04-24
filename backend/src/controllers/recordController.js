@@ -77,22 +77,41 @@ module.exports = {
       const userId = req.params.userId;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const startDate = req.query.startDate;
+      const endDate = req.query.endDate;
       const offset = (page - 1) * limit;
 
+      // Construir el objeto where con los filtros de fecha si están presentes
+      const whereClause = { userId };
+      
+      if (startDate && endDate) {
+        whereClause.date = {
+          [Op.between]: [startDate, endDate]
+        };
+      } else if (startDate) {
+        whereClause.date = {
+          [Op.gte]: startDate
+        };
+      } else if (endDate) {
+        whereClause.date = {
+          [Op.lte]: endDate
+        };
+      }
+
+      console.log('Query params:', { userId, page, limit, startDate, endDate });
+      console.log('Where clause:', whereClause);
+
       const { count, rows: records } = await Record.findAndCountAll({
-        where: { userId },
+        where: whereClause,
         offset,
         limit,
         order: [['date', 'DESC']],
       });
 
-      const applications = await Application.findAll({
-        where: { userId },
-      });
+      console.log(`Found ${count} records`);
 
       return res.json({
         records,
-        // applications,
         total: count,
         page,
         limit,

@@ -1,15 +1,18 @@
-const { Router, application } = require('express');
+const { Router } = require('express');
 const userRoute = require('./userRoute');
 const uploadRoute = require('./uploadRoute');
 const recordRoute = require('./recordRoute');
-const applicationRoute=require('./applicationRoute');
+const applicationRoute = require('./applicationRoute');
 const moduleRoute = require('./moduleRoute');
-const router = Router()
+const attendanceRoute = require('./attendanceRoute');
 
-router.use('/user', userRoute)
+const router = Router();
+
+router.use('/user', userRoute);
 router.use('/upload', uploadRoute);
 router.use('/record', recordRoute);
 router.use('/application', applicationRoute);
 router.use('/module', moduleRoute);
+router.use('/attendance', attendanceRoute);
 
-module.exports = router
+module.exports = router;

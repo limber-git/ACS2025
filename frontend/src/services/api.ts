@@ -1,7 +1,28 @@
 import { config } from '../config/config';
-import type { AttendanceRecord } from '../components/tables/AttendanceTable';
-import type { Application } from '../components/tables/ApplicationsTable';
+import type { Application } from '../components/tables/ApplicationsTables/ApplicationsTable';
 import { LoginResponse, LoginCredentials } from '../types/auth';
+
+interface AttendanceRecord {
+  recordId: number;
+  date: string;
+  schedule: {
+    onDuty: string;
+    offDuty: string;
+  };
+  attendance: {
+    clockIn: string | null;
+    clockOut: string | null;
+  };
+  status: {
+    type: 'PRESENT' | 'LATE' | 'ABSENT' | 'JUSTIFIED';
+    justification?: {
+      applicationId: number;
+      type: string;
+      reason: string;
+      status: string;
+    };
+  };
+}
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -15,17 +36,16 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { token, ...fetchOptions } = options;
-    
-    const headers = new Headers(fetchOptions.headers);
-    headers.set('Content-Type', 'application/json');
-    
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+    const headers = new Headers({
+      'Content-Type': 'application/json'
+    });
+
+    if (options.token) {
+      headers.append('Authorization', `Bearer ${options.token}`);
     }
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...fetchOptions,
+      ...options,
       headers
     });
 
@@ -53,41 +73,38 @@ class ApiService {
     });
   }
 
-  async getAttendanceByUser(userId: string, page?: number, limit?: number): Promise<AttendanceRecord[] | { records: AttendanceRecord[], total?: number }> {
-    let endpoint = config.endpoints.auth.getAttendanceByUser.replace(":id", userId);
+  async getAttendanceByUser(
+    userId: string, 
+    page?: number, 
+    limit?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<{ records: AttendanceRecord[], pagination: any }> {
+    let endpoint = config.endpoints.auth.getAttendanceByUser.replace(':id', userId);
     const params: string[] = [];
     if (page !== undefined) params.push(`page=${page}`);
     if (limit !== undefined) params.push(`limit=${limit}`);
-    if (params.length > 0) endpoint += `?${params.join('&')}`;
-    return this.request<AttendanceRecord[] | { records: AttendanceRecord[], total?: number }>(endpoint, {
-      method: 'GET',
-    });
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (params.length > 0) endpoint += `?${params.join('&')}`;    
+    return this.request<{ records: AttendanceRecord[], pagination: any }>(endpoint);
   }
 
   async getApplicationsByUser(
     userId: string,
     page: number = 1,
-    limit: number = 10
-  ): Promise<{
-    records: Application[],
-    pagination: {
-      total: number;
-      totalPages: number;
-      currentPage: number;
-      pageSize: number;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-    }
-  }> {
-    const endpoint = config.endpoints.auth.getApplicationsByUser.replace(":id", userId);
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString()
-    });
-
-    return this.request(endpoint + '?' + params.toString(), {
-      method: 'GET'
-    });
+    limit: number = 10,
+    startDate?: string,
+    endDate?: string
+  ): Promise<{ applications: Application[]; pagination: any }> {
+    let endpoint = config.endpoints.auth.getApplicationsByUser.replace(':id', userId);
+    const params: string[] = [];
+    if (page !== undefined) params.push(`page=${page}`);
+    if (limit !== undefined) params.push(`limit=${limit}`);
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (params.length > 0) endpoint += `?${params.join('&')}`;    
+    return this.request<{ applications: Application[]; pagination: any }>(endpoint);
   }
 }
 

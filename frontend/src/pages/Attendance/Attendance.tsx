@@ -1,6 +1,6 @@
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import ComponentCard from "../../components/common/ComponentCard";
-import AttendanceTable from "../../components/tables/AttendanceTable";
+import AttendanceTable from "../../components/tables/AttendanceTables/AttendanceTable";
 
 export default function BasicTables() {
   return (
