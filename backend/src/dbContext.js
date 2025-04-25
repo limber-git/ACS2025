@@ -69,10 +69,11 @@ User.hasMany(Record, {
 Record.belongsTo(User, { foreignKey: 'userId' })
 Record.hasOne(Application, {
     foreignKey: 'recordId',
+    as: 'application',
     // onDelete: 'CASCADE',
     hooks: true,
 });
-Application.belongsTo(Record, { foreignKey: 'recordId' });
+Application.belongsTo(Record, { foreignKey: 'recordId', as: 'record' });
 User.hasMany(Application, {
     foreignKey: 'userId',
     // onDelete: 'CASCADE',

@@ -6,6 +6,7 @@ const {
   getAllActiveRecords,
   getRecordsByDateRange,
   deleteRecords,
+  getRecordsByUserCalculated,
   updateRecordStateToFalse
 } = require("../controllers/recordController");
 const getErrorResponse = require("../utils/getErrorResponse");
@@ -137,5 +138,13 @@ module.exports = {
         message: "Error interno del servidor.",
       });
     }
+  },
+  getRecordsByUserCalculated: async (req, res) => {
+    try {
+      await getRecordsByUserCalculated(req, res); // El del controller
+    } catch (error) {
+      getErrorResponse(error, res);
+    }
   }
+  
 };

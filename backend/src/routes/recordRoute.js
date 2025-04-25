@@ -7,7 +7,8 @@ const {
   getRecordsByDateRange,
   updateRecordStateByDateRange,
   deleteRecords,
-  updateRecordState
+  updateRecordState,
+  getRecordsByUserCalculated,
 } = require("../handlers/recordHandler");
 const router = express();
 router.get("/getAllRecords", getAllRecords);
@@ -18,5 +19,6 @@ router.get("/getAllActiveRecords", getAllActiveRecords);
 router.get("/getActiveRecordsByUser/:userId", getActiveRecordsByUser);
 router.delete("/deleteRecords", deleteRecords); // Usar directamente la función del controlador
 router.post("/update-state", updateRecordState);
+router.get("/getRecordsByUserCalculated/:userId", getRecordsByUserCalculated);
 
 module.exports = router;

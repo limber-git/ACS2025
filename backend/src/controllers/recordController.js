@@ -45,14 +45,14 @@ module.exports = {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const offset = (page - 1) * limit;
-  
+
       // 2. Consulta paginada y total de registros
       const { count, rows: records } = await Record.findAndCountAll({
         offset,
         limit,
         order: [['date', 'DESC']], // Opcional: ordena por fecha descendente
       });
-  
+
       // 3. Respuesta con datos y total
       return res.json({
         records,
@@ -83,7 +83,7 @@ module.exports = {
 
       // Construir el objeto where con los filtros de fecha si están presentes
       const whereClause = { userId };
-      
+
       if (startDate && endDate) {
         whereClause.date = {
           [Op.between]: [startDate, endDate]
@@ -98,8 +98,8 @@ module.exports = {
         };
       }
 
-      console.log('Query params:', { userId, page, limit, startDate, endDate });
-      console.log('Where clause:', whereClause);
+      // console.log('Query params:', { userId, page, limit, startDate, endDate });
+      // console.log('Where clause:', whereClause);
 
       const { count, rows: records } = await Record.findAndCountAll({
         where: whereClause,
@@ -108,7 +108,7 @@ module.exports = {
         order: [['date', 'DESC']],
       });
 
-      console.log(`Found ${count} records`);
+      // console.log(`Found ${count} records`);
 
       return res.json({
         records,
@@ -169,5 +169,112 @@ module.exports = {
       throw error;
     }
   },
-  updateRecordStateByDateRange: async (startDate, endDate, newState) => {},
+  updateRecordStateByDateRange: async (startDate, endDate, newState) => { },
+
+  //nuevo records por usuario
+  getRecordsByUserCalculated: async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const startDate = req.query.startDate;
+      const endDate = req.query.endDate;
+      const offset = (page - 1) * limit;
+
+      const whereClause = { userId };
+
+      if (startDate && endDate) {
+        whereClause.date = { [Op.between]: [startDate, endDate] };
+      } else if (startDate) {
+        whereClause.date = { [Op.gte]: startDate };
+      } else if (endDate) {
+        whereClause.date = { [Op.lte]: endDate };
+      }
+
+      const { count, rows: records } = await Record.findAndCountAll({
+        where: whereClause,
+        offset,
+        limit,
+        order: [["date", "DESC"]],
+        include: [
+          {
+            model: Application,
+            as: 'application',
+            required: false
+          }],
+      });
+
+      const enrichedRecords = records.map((r) => calculateRecordDetails(r));
+      // console.log("record: ", JSON.stringify(enrichedRecords, null, 2));
+      return res.json({
+        records: enrichedRecords,
+        total: count,
+        page,
+        limit,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  },
 };
+
+const calculateRecordDetails = (record) => {
+  let late = false;
+  let early = false;
+  let exception = null;
+  let absence = false;
+  let needsApplication = false;
+
+  const parseTime = (t) => (t ? new Date(`1970-01-01T${t}Z`) : null);
+
+  const onDutyTime = parseTime(record.onDuty);
+  const offDutyTime = parseTime(record.offDuty);
+  const clockInTime = parseTime(record.clockIn);
+  const clockOutTime = parseTime(record.clockOut);
+  const mustCIn = record.mustCIn;
+  const mustCOut = record.mustCOut;
+  const application = record.application;
+
+  if (mustCIn && clockInTime && onDutyTime && clockInTime > onDutyTime) {
+    late = true;
+  }
+
+  if (mustCOut && clockOutTime && offDutyTime && clockOutTime < offDutyTime) {
+    early = true;
+  }
+
+  if ((mustCIn && !clockInTime) || (mustCOut && !clockOutTime)) {
+    if (!application) {
+      exception = "Ausencia injustificada";
+      needsApplication = true;
+    }
+  } else if (late && !application) {
+    exception = "Retraso injustificado";
+    needsApplication = true;
+  } else if (early && !application) {
+    exception = "Salida anticipada injustificada";
+    needsApplication = true;
+  } else if (application) {
+    exception = `Permiso: ${application.type || "Justificado"}`;
+    needsApplication = false;
+  }
+
+  return {
+    date: record.date,
+    schedule: record.timeTable,
+    clockIn: record.clockIn || "-",
+    clockOut: record.clockOut || "-",
+    late,
+    early,
+    exception,
+    needsApplication,
+    recordId: record.recordId,
+    recordName: record.name,
+    recordState: record.state,
+    applicationId: application ? application.applicationId : null,
+    applicationStatus: application ? application.status : null
+  };
+};
+
+module.exports.calculateRecordDetails = calculateRecordDetails;
+
