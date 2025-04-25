@@ -6,7 +6,8 @@ export const config = {
       logout: '/user/logout',
       verify: '/user/verify',
       getAttendanceByUser: '/record/getRecordsByUser/:id',
-      getApplicationsByUser: '/application/getApplicationsByUser/:id'
+      getApplicationsByUser: '/application/getApplicationsByUser/:id',
+      getAttendanceByUserCalculated: '/record/getRecordsByUserCalculated/:id'
     }
   }
 };

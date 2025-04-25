@@ -23,6 +23,23 @@ interface AttendanceRecord {
     };
   };
 }
+// Mantén la definición de la interfaz AttendanceRecord si la necesitas para tipar la respuesta
+interface AttendanceRecordCalculated { // Puedes crear una nueva interfaz para la respuesta calculada
+  date: string;
+  schedule: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  late: boolean; // O number si ya son minutos
+  early: boolean; // O number si ya son minutos
+  situation: string | null;
+  needsApplication: boolean;
+  recordId: string;
+  recordName: string;
+  recordState: boolean;
+  applicationId: string | null;
+  applicationStatus: string | null;
+}
+
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -68,7 +85,7 @@ class ApiService {
 
   async logout(token: string) {
     return this.request(config.endpoints.auth.logout, {
-      method: 'POST',
+      method: 'GET',
       token
     });
   }
@@ -105,6 +122,28 @@ class ApiService {
     if (endDate) params.push(`endDate=${endDate}`);
     if (params.length > 0) endpoint += `?${params.join('&')}`;    
     return this.request<{ applications: Application[]; pagination: any }>(endpoint);
+  }
+  
+  async getAttendanceByUserCalculated(
+    userId: string,
+    page?: number,
+    limit?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<{ records: AttendanceRecordCalculated[], pagination: any }> {
+    let endpoint = config.endpoints.auth.getAttendanceByUserCalculated.replace(':id', userId);
+    const params: string[] = [];
+    if (page !== undefined) params.push(`page=${page}`);
+    if (limit !== undefined) params.push(`limit=${limit}`);
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (params.length > 0) endpoint += `?${params.join('&')}`;
+    return this.request<{ records: AttendanceRecordCalculated[], pagination: any }>(endpoint);
+  }
+
+  async getRecordByIdCalculated(recordId: string): Promise<AttendanceRecordCalculated> {
+    const endpoint = config.endpoints.auth.getAttendanceByUserCalculated.replace(':recordId', recordId);
+    return this.request<AttendanceRecordCalculated>(endpoint);
   }
 }
 

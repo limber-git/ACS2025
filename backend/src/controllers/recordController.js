@@ -50,7 +50,7 @@ module.exports = {
       const { count, rows: records } = await Record.findAndCountAll({
         offset,
         limit,
-        order: [['date', 'DESC']], // Opcional: ordena por fecha descendente
+        order: [["date", "DESC"]], // Opcional: ordena por fecha descendente
       });
 
       // 3. Respuesta con datos y total
@@ -86,15 +86,15 @@ module.exports = {
 
       if (startDate && endDate) {
         whereClause.date = {
-          [Op.between]: [startDate, endDate]
+          [Op.between]: [startDate, endDate],
         };
       } else if (startDate) {
         whereClause.date = {
-          [Op.gte]: startDate
+          [Op.gte]: startDate,
         };
       } else if (endDate) {
         whereClause.date = {
-          [Op.lte]: endDate
+          [Op.lte]: endDate,
         };
       }
 
@@ -105,7 +105,7 @@ module.exports = {
         where: whereClause,
         offset,
         limit,
-        order: [['date', 'DESC']],
+        order: [["date", "DESC"]],
       });
 
       // console.log(`Found ${count} records`);
@@ -169,13 +169,13 @@ module.exports = {
       throw error;
     }
   },
-  updateRecordStateByDateRange: async (startDate, endDate, newState) => { },
+  updateRecordStateByDateRange: async (startDate, endDate, newState) => {},
 
   //nuevo records por usuario
   getRecordsByUserCalculated: async (req, res) => {
     try {
       const userId = req.params.userId;
-      const page = parseInt(req.query.page) || 1;
+      const page = parseInt(req.query.page) || -1;
       const limit = parseInt(req.query.limit) || 10;
       const startDate = req.query.startDate;
       const endDate = req.query.endDate;
@@ -199,9 +199,10 @@ module.exports = {
         include: [
           {
             model: Application,
-            as: 'application',
-            required: false
-          }],
+            as: "application",
+            required: false,
+          },
+        ],
       });
 
       const enrichedRecords = records.map((r) => calculateRecordDetails(r));
@@ -219,62 +220,99 @@ module.exports = {
 };
 
 const calculateRecordDetails = (record) => {
-  let late = false;
-  let early = false;
-  let exception = null;
-  let absence = false;
+  let situationParts = [];
   let needsApplication = false;
 
-  const parseTime = (t) => (t ? new Date(`1970-01-01T${t}Z`) : null);
-
-  const onDutyTime = parseTime(record.onDuty);
-  const offDutyTime = parseTime(record.offDuty);
-  const clockInTime = parseTime(record.clockIn);
-  const clockOutTime = parseTime(record.clockOut);
-  const mustCIn = record.mustCIn;
-  const mustCOut = record.mustCOut;
+  const clockInTimeStr = record.clockIn;
+  const clockOutTimeStr = record.clockOut;
+  const onDutyTimeStr = record.onDuty;
+  const offDutyTimeStr = record.offDuty;
   const application = record.application;
 
-  if (mustCIn && clockInTime && onDutyTime && clockInTime > onDutyTime) {
-    late = true;
+  const hasApplication = !!application;
+  const noClockIn = record.mustCIn && !clockInTimeStr;
+  const noClockOut = record.mustCOut && !clockOutTimeStr;
+
+  let isLate = false;
+  if (onDutyTimeStr && clockInTimeStr) {
+    const onDutyDate = new Date(`2000-01-01T${onDutyTimeStr}Z`); // Usamos una fecha arbitraria para la comparación horaria en UTC
+    const clockInDate = new Date(`2000-01-01T${clockInTimeStr}Z`);
+    if (clockInDate > onDutyDate) {
+      isLate = true;
+    }
   }
 
-  if (mustCOut && clockOutTime && offDutyTime && clockOutTime < offDutyTime) {
-    early = true;
+  let isEarly = false;
+  if (offDutyTimeStr && clockOutTimeStr) {
+    const offDutyDate = new Date(`2000-01-01T${offDutyTimeStr}Z`); // Usamos una fecha arbitraria para la comparación horaria en UTC
+    const clockOutDate = new Date(`2000-01-01T${clockOutTimeStr}Z`);
+    if (clockOutDate < offDutyDate) {
+      isEarly = true;
+    }
   }
 
-  if ((mustCIn && !clockInTime) || (mustCOut && !clockOutTime)) {
-    if (!application) {
-      exception = "Ausencia injustificada";
+  if (hasApplication) {
+    situationParts.push(`Permission: ${application.type || "Justified"}`);
+    needsApplication = false;
+  } else {
+    if (noClockIn) {
+      situationParts.push("Unmarked entry");
       needsApplication = true;
     }
-  } else if (late && !application) {
-    exception = "Retraso injustificado";
-    needsApplication = true;
-  } else if (early && !application) {
-    exception = "Salida anticipada injustificada";
-    needsApplication = true;
-  } else if (application) {
-    exception = `Permiso: ${application.type || "Justificado"}`;
-    needsApplication = false;
+    if (noClockOut) {
+      situationParts.push("Unmarked exit");
+      needsApplication = true;
+    }
+    if (isLate) {
+      // Calcula la diferencia en minutos para mostrarla
+      const onDutyDate = new Date(`2000-01-01T${onDutyTimeStr}Z`);
+      const clockInDate = new Date(`2000-01-01T${clockInTimeStr}Z`);
+      const lateDiffMillis = clockInDate.getTime() - onDutyDate.getTime();
+      const lateMinutes = Math.floor(lateDiffMillis / (1000 * 60));
+      situationParts.push(`Late Check-in ${formatMinutesToTime(lateMinutes)}`);
+      needsApplication = true;
+    }
+    if (isEarly) {
+      // Calcula la diferencia en minutos para mostrarla
+      const offDutyDate = new Date(`2000-01-01T${offDutyTimeStr}Z`);
+      const clockOutDate = new Date(`2000-01-01T${clockOutTimeStr}Z`);
+      const earlyDiffMillis = offDutyDate.getTime() - clockOutDate.getTime();
+      const earlyMinutes = Math.floor(earlyDiffMillis / (1000 * 60));
+      situationParts.push(
+        `Early departure: ${formatMinutesToTime(earlyMinutes)}`
+      );
+      needsApplication = true;
+    }
+    if (noClockIn && noClockOut) {
+      situationParts.push("Unjustified absence");
+      needsApplication = true;
+    }
   }
+
+  const situation =
+    situationParts.length > 0 ? situationParts.join(", ") : null;
 
   return {
     date: record.date,
     schedule: record.timeTable,
-    clockIn: record.clockIn || "-",
-    clockOut: record.clockOut || "-",
-    late,
-    early,
-    exception,
-    needsApplication,
+    clockIn: clockInTimeStr || "-",
+    clockOut: clockOutTimeStr || "-",
+    late: record.late || "00:00:00", 
+    early: record.early || "00:00:00", 
+    situation,
+    needsApplication: needsApplication && !hasApplication,
     recordId: record.recordId,
     recordName: record.name,
     recordState: record.state,
     applicationId: application ? application.applicationId : null,
-    applicationStatus: application ? application.status : null
+    applicationStatus: application ? application.status : null,
   };
 };
 
-module.exports.calculateRecordDetails = calculateRecordDetails;
-
+const formatMinutesToTime = (minutes) => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours.toString().padStart(2, "0")}:${remainingMinutes
+    .toString()
+    .padStart(2, "0")}:00`;
+};
