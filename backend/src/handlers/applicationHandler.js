@@ -1,6 +1,21 @@
-const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange, getApplicationsByUserId } = require("../controllers/applicationController")
+const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange, getApplicationsByUserId, uploadToImgBB } = require("../controllers/applicationController")
 
 module.exports = {
+    uploadToImgBB: async (req, res) => {
+        try {
+            const { base64Image, fileName } = req.body;
+            const result = await uploadToImgBB(base64Image, fileName);
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message || error
+            });
+        }
+    },
     postApplication: async (req, res) => {
         try {
             const application = req.body;

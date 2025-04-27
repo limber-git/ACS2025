@@ -7,7 +7,9 @@ export const config = {
       verify: '/user/verify',
       getAttendanceByUser: '/record/getRecordsByUser/:id',
       getApplicationsByUser: '/application/getApplicationsByUser/:id',
-      getAttendanceByUserCalculated: '/record/getRecordsByUserCalculated/:id'
+      getAttendanceByUserCalculated: '/record/getRecordsByUserCalculated/:id',
+      submitApplication: '/application/createApplications',
+      uploadImage: '/application/upload-image'
     }
   }
 };

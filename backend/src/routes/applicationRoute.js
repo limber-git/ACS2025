@@ -1,5 +1,5 @@
 const express = require('express');
-const { postApplication, getAllApplicationsById, getAllApplications, getApplicationsCountForCurrentMonthById, putApplication, getApplicationsByDateRange, getApplicationsByUserId } = require('../handlers/applicationHandler');
+const { postApplication, getAllApplicationsById, getAllApplications, getApplicationsCountForCurrentMonthById, putApplication, getApplicationsByDateRange, getApplicationsByUserId, uploadToImgBB } = require('../handlers/applicationHandler');
 
 const router = express();
 
@@ -10,6 +10,6 @@ router.get('/getApplicationsById/:applicationId', getAllApplicationsById);
 router.get('/date-range', getApplicationsByDateRange);
 router.get('/getAppByDate/:userId', getApplicationsCountForCurrentMonthById);
 router.get('/getApplicationsByUser/:userId', getApplicationsByUserId);
-
+router.post('/upload-image', uploadToImgBB);
 
 module.exports = router;

@@ -15,6 +15,7 @@
   "author": "CBA-Tarija",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.9.0",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -24,6 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
     "nodemon": "^3.1.0",
     "pg": "^8.11.5",
     "pgtools": "^1.0.1",

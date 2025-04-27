@@ -1,18 +1,91 @@
 const { Application } = require("../dbContext");
 const { Op } = require("sequelize");
 const dayjs = require("dayjs");
+const axios = require("axios");
+require("dotenv").config();
+
+const IMGBB_API_KEY = process.env.API_KEY_IMGBB;
+const IMGBB_BASE_URL = process.env.BASE_URL;
 
 module.exports = {
-  postApplication: async (application) => {
+  uploadToImgBB: async (base64Image, fileName = null) => {
     try {
-      const newApplication = await Application.create(application);
+      const formData = new URLSearchParams();
+      formData.append("key", IMGBB_API_KEY);
+
+      // Si la imagen ya viene como base64, extraemos la parte relevante
+      const imageData = base64Image.includes("base64")
+        ? base64Image.split(",")[1]
+        : base64Image;
+
+      formData.append("image", imageData);
+
+      // Si se proporciona un nombre de archivo, lo agregamos
+      if (fileName) {
+        formData.append("name", fileName);
+      }
+
+      const response = await axios.post(`${IMGBB_BASE_URL}/upload`, formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+
+      if (!response.data) {
+        throw new Error("Failed to upload image");
+      }
+
+      const data = response.data;
+      return {
+        url: data.data.url,
+        delete_url: data.data.delete_url,
+        display_url: data.data.display_url,
+        thumbnail: data.data?.thumb?.url || null,
+      };
+    } catch (error) {
+      console.error("Error uploading to imgBB:", error);
+      throw new Error("Failed to upload image");
+    }
+  },
+
+  postApplication: async (applicationData) => {
+    console.log(applicationData);
+    try {
+      const { recordId, userId, reason, file, regularDate, regularTime, type, time } =
+        applicationData;
+
+      let fileData = null;
+      if (file) {
+        const now = dayjs();
+        const formattedDate = now.format("YYYY-MM-DD");
+        const fileType =
+          typeof file === "string" && file.startsWith("data:image")
+            ? "image"
+            : "document";
+        const fileName = `uploaded_${formattedDate}_${fileType}`;
+
+        fileData = await module.exports.uploadToImgBB(file, fileName);
+      }
+
+      const newApplication = await Application.create({
+        recordId,
+        userId,
+        reason,
+        regularDate,
+        regularTime,
+        time,
+        type,
+        img: fileData ? fileData.url : null,
+        status: "Pending", // este sí, lo pones fijo
+      });
+
       return {
         success: true,
         message: "Application created successfully",
         application: newApplication,
       };
     } catch (error) {
-      console.error("Error creating leave application:", error);
+      console.error("Error creating application:", error);
       throw new Error("Internal Server Error");
     }
   },
@@ -87,23 +160,23 @@ module.exports = {
       const validatedLimit = Math.min(50, Math.max(1, parseInt(limit))); // Cap at 50 items per page
       const offset = (validatedPage - 1) * validatedLimit;
 
-      console.log('Controller - Fetching applications with:', {
+      console.log("Controller - Fetching applications with:", {
         userId,
         page: validatedPage,
         limit: validatedLimit,
-        offset
+        offset,
       });
-      
+
       // Get paginated results and total count
       const { count, rows } = await Application.findAndCountAll({
         where: { userId },
-        order: [['regularDate', 'DESC']], // Sort by date, newest first
+        order: [["regularDate", "DESC"]], // Sort by date, newest first
         limit: validatedLimit,
-        offset: offset
+        offset: offset,
       });
 
       // Map the results to our response format
-      const records = rows.map(app => ({
+      const records = rows.map((app) => ({
         applicationId: app.applicationId,
         type: app.type,
         status: app.status,
@@ -114,7 +187,7 @@ module.exports = {
         time: app.time,
         state: app.state,
         by: app.by,
-        suggestion: app.suggestion
+        suggestion: app.suggestion,
       }));
 
       // Calculate pagination metadata
@@ -122,14 +195,14 @@ module.exports = {
       const hasNextPage = validatedPage < totalPages;
       const hasPreviousPage = validatedPage > 1;
 
-      console.log('Controller - Pagination info:', {
+      console.log("Controller - Pagination info:", {
         total: count,
         totalPages,
         currentPage: validatedPage,
         hasNextPage,
-        hasPreviousPage
+        hasPreviousPage,
       });
-      
+
       return {
         success: true,
         records,
@@ -139,11 +212,13 @@ module.exports = {
           currentPage: validatedPage,
           pageSize: validatedLimit,
           hasNextPage,
-          hasPreviousPage
-        }
+          hasPreviousPage,
+        },
       };
     } catch (error) {
-      throw new Error("Error fetching applications by user ID: " + error.message);
+      throw new Error(
+        "Error fetching applications by user ID: " + error.message
+      );
     }
   },
 

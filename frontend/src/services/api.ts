@@ -145,6 +145,36 @@ class ApiService {
     const endpoint = config.endpoints.auth.getAttendanceByUserCalculated.replace(':recordId', recordId);
     return this.request<AttendanceRecordCalculated>(endpoint);
   }
+
+  async submitApplication(applicationData: any): Promise<any> {
+    console.log('Enviando datos de aplicación (api):', applicationData);
+    const endpoint = config.endpoints.auth.submitApplication;
+    const token = localStorage.getItem('token'); // O como manejes el token de autenticación
+    
+    const options: RequestOptions = {
+      method: 'POST',
+      body: JSON.stringify(applicationData),
+      token: token || undefined
+    };
+
+    return this.request(endpoint, options);
+  }
+
+  async uploadImageToImgBB(base64Image: string, fileName?: string): Promise<any> {
+    const endpoint = config.endpoints.auth.uploadImage;
+    const token = localStorage.getItem('token') || undefined;
+    
+    const options: RequestOptions = {
+      method: 'POST',
+      body: JSON.stringify({
+        base64Image,
+        fileName
+      }),
+      token: token || undefined
+    };
+    
+    return this.request(endpoint, options);
+  }
 }
 
 export const api = new ApiService();

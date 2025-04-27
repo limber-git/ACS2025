@@ -291,14 +291,16 @@ const calculateRecordDetails = (record) => {
 
   const situation =
     situationParts.length > 0 ? situationParts.join(", ") : null;
-
   return {
     date: record.date,
     schedule: record.timeTable,
-    clockIn: clockInTimeStr || "-",
-    clockOut: clockOutTimeStr || "-",
-    late: record.late || "00:00:00", 
-    early: record.early || "00:00:00", 
+    clockIn: clockInTimeStr || null,
+    clockOut: clockOutTimeStr || null,
+    userId: record.userId,
+    onDuty: record.onDuty,
+    offDuty: record.offDuty,
+    late: record.late, 
+    early: record.early, 
     situation,
     needsApplication: needsApplication && !hasApplication,
     recordId: record.recordId,

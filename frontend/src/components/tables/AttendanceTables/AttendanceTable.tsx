@@ -13,11 +13,13 @@ import TableSkeleton from "./TableSkeleton";
 import DateRangeFilter from "../DateRangeFilter";
 import TablePagination from "../TablePagination";
 import { useModal } from "../../../hooks/useModal"; // Asegúrate de la ruta correcta
-import { Modal } from "../../ui/modal"; // Asegúrate de la ruta correcta
+import RequestModal, { ApplicationFormData } from './RequestModal'; // Asegúrate de la ruta correcta
 
 export interface AttendanceRecordCalculated {
   date: string;
   schedule: string;
+  onDuty: string;
+  offDuty: string;
   clockIn: string | null;
   clockOut: string | null;
   late: boolean; // O number si ya son minutos
@@ -27,6 +29,7 @@ export interface AttendanceRecordCalculated {
   recordId: string;
   recordName: string;
   recordState: boolean;
+  userId: string;
   applicationId: string | null;
   applicationStatus: string | null;
 }
@@ -76,6 +79,37 @@ export default function AttendanceTable() {
     closeModal: closeRequestModal,
   } = useModal();
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null); // Tipo 'any' o la interfaz de tu 'record'
+
+  const handleApplicationSubmit = async (data: ApplicationFormData) => {
+    const lt="00:30:00";
+    try {
+      if (!selectedRecord) {
+        throw new Error('No record selected');
+      }
+
+      console.log('Enviando datos de aplicación:', { data, selectedRecord });
+      
+      // Enviar directamente el objeto como JSON
+      const response = await api.submitApplication({
+        recordId: data.recordId,
+        file: data.file, // URL de la imagen de ImgBB
+        userId: data.userId,
+        reason: data.reason,
+        type: selectedRecord.situation, // Usar la situación del registro
+        regularDate: selectedRecord.date,
+        regularTime: selectedRecord.onDuty, // Extraer solo la hora del schedule
+        time: selectedRecord.clockIn? selectedRecord.late: lt,
+      });
+      
+      // Actualizar la tabla después de enviar la solicitud
+      // await fetchRecords(); // Recargar los registros en lugar de solo limpiarlos
+      
+      return response;
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -174,113 +208,12 @@ export default function AttendanceTable() {
 
   return (
     <>
-      <Modal
+      <RequestModal
         isOpen={isRequestModalOpen}
         onClose={closeRequestModal}
-        className="max-w-[700px] p-6 lg:p-10"
-      >
-        <div className="flex flex-col px-2 overflow-y-auto custom-scrollbar">
-          <div>
-            <h5 className="mb-2 font-semibold text-gray-800 modal-title text-theme-xl dark:text-white/90 lg:text-2xl">
-              Request Justification
-            </h5>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Please provide the details to justify your absence or incorrect
-              clocking.
-            </p>
-          </div>
-          <div className="mt-8">
-            {selectedRecord && (
-              <div className="mb-4 p-4 rounded-md bg-gray-100 dark:bg-gray-800">
-                <h6 className="font-semibold text-gray-700 dark:text-gray-300">
-                  Record Details
-                </h6>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Date: {formatDateEnglish(selectedRecord.date)}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Schedule: {extractHour(selectedRecord.schedule)}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Issue: {selectedRecord.situation || "N/A"}
-                </p>
-                {/* Puedes agregar más detalles según las propiedades de tu objeto 'record' */}
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Clock In: {selectedRecord.clockIn || "N/A"}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Clock Out: {selectedRecord.clockOut || "N/A"}
-                </p>
-              </div>
-            )}
-
-            {/* Reason for Justification */}
-            <div className="mb-6">
-              <label
-                className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
-                htmlFor="justificationReason"
-              >
-                Reason for Justification <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="justificationReason"
-                className="dark:bg-dark-900 h-24 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-              />
-            </div>
-
-            {/* File Upload */}
-            <div>
-              <label
-                className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
-                htmlFor="justificationFile"
-              >
-                Attach File (Optional - PDF or Image)
-              </label>
-              <input
-                id="justificationFile"
-                type="file"
-                accept=".pdf, image/*"
-                className="dark:bg-dark-900 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Allowed files: PDF, JPG, PNG. Max size: [Specify Max Size]
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
-            <button
-              onClick={closeRequestModal}
-              type="button"
-              className="flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] sm:w-auto"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                const reason = document.getElementById(
-                  "justificationReason"
-                )?.value;
-                const file =
-                  document.getElementById("justificationFile")?.files[0];
-                console.log(
-                  "Sending justification for record:",
-                  selectedRecord?.recordId,
-                  "Reason:",
-                  reason,
-                  "File:",
-                  file
-                );
-                closeRequestModal();
-                // Aquí implementarías la lógica para enviar la solicitud al backend
-              }}
-              type="button"
-              className="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto"
-            >
-              Submit Request
-            </button>
-          </div>
-        </div>
-      </Modal>
+        record={selectedRecord}
+        onSubmit={handleApplicationSubmit}
+      />
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <DateRangeFilter
           onFilterChange={handleDateFilterChange}
