@@ -30,7 +30,6 @@ export default function AttendanceTable() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
-  const [total, setTotal] = useState<number | null>(null);
 
   const [cache, setCache] = useState<
     Record<string, { records: AttendanceRecordCalculated[] }>
@@ -86,7 +85,13 @@ export default function AttendanceTable() {
         newRecords = response;
       } else {
         newRecords = response.records || [];
-        setPagination(response.pagination || null);
+        // El total viene directamente en la respuesta, no en pagination
+        const totalItems = response.total || 0;
+        setPagination({
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit)
+        });
+        console.log('Setting pagination with total:', totalItems);
       }
 
       setRecords(newRecords);
@@ -142,6 +147,9 @@ export default function AttendanceTable() {
   const handleDateFilterReset = () => {
     setDateFilter(null);
     setPage(1);
+    setLimit(5);
+    setPagination(null);
+    setCache({});
   };
 
   if (loading) {
@@ -340,7 +348,7 @@ export default function AttendanceTable() {
         {records.length > 0 && (
           <TablePagination
             page={page}
-            total={pagination?.totalItems ?? null}
+            total={pagination?.totalItems ?? 0}
             limit={limit}
             loading={loading}
             onPageChange={setPage}

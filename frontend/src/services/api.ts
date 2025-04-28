@@ -130,7 +130,7 @@ class ApiService {
     limit?: number,
     startDate?: string,
     endDate?: string
-  ): Promise<{ records: AttendanceRecordCalculated[], pagination: any }> {
+  ): Promise<{ records: AttendanceRecordCalculated[], total: number, page: number, limit: number }> {
     let endpoint = config.endpoints.auth.getAttendanceByUserCalculated.replace(':id', userId);
     const params: string[] = [];
     if (page !== undefined) params.push(`page=${page}`);
@@ -138,7 +138,7 @@ class ApiService {
     if (startDate) params.push(`startDate=${startDate}`);
     if (endDate) params.push(`endDate=${endDate}`);
     if (params.length > 0) endpoint += `?${params.join('&')}`;
-    return this.request<{ records: AttendanceRecordCalculated[], pagination: any }>(endpoint);
+    return this.request<{ records: AttendanceRecordCalculated[], total: number, page: number, limit: number }>(endpoint);
   }
 
   async getRecordByIdCalculated(recordId: string): Promise<AttendanceRecordCalculated> {

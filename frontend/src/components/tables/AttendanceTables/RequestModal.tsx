@@ -23,7 +23,6 @@ const LazyPreviewView = React.lazy(() =>
   }))
 );
 
-
 const RequestModal: React.FC<RequestModalProps> = ({
   isOpen,
   onClose,
@@ -106,7 +105,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
             userId.replace(/[^a-zA-Z0-9_]/g, "");
           const fileName = `${safeUserName}_${formattedDate}_${fileType}`;
 
-          console.log("Uploading image to ImgBB...");
           const response = await api.uploadImageToImgBB(fileBase64, fileName);
 
           if (!response.data?.url) {
@@ -114,9 +112,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
           }
 
           imgUrl = response.data.url;
-          console.log("Image uploaded successfully:", response.data);
         } catch (uploadError) {
-          console.error("Error uploading image:", uploadError);
           const errorMessage =
             uploadError instanceof Error
               ? uploadError.message
@@ -140,8 +136,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
         regularTime: extractHour(record.schedule),
         type: record.situation || "N/A",
       };
-
-      console.log("Submitting application with data:", applicationData);
       await onSubmit(applicationData);
 
       setFile(null);
@@ -149,7 +143,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
       setReason("");
       handleClose();
     } catch (error) {
-      console.error("Error submitting application:", error);
       alert(
         `Error submitting application: ${
           error instanceof Error ? error.message : "An unknown error occurred"
@@ -259,7 +252,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-0">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Justification
@@ -275,40 +268,44 @@ const RequestModal: React.FC<RequestModalProps> = ({
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex flex-wrap gap-4">
-                      <div className="flex-1 min-w-[200px]">
-                        <input
-                          type="file"
-                          onChange={handleFileChange}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-md file:border-0
-              file:text-sm file:font-medium
-              file:bg-blue-600 file:text-white
-              hover:file:bg-blue-700 focus:outline-none
-              dark:file:bg-blue-700 dark:file:text-gray-100
-              dark:hover:file:bg-blue-600"
-                        />
-                      </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      {!file && (
+                        <div className="flex-1 min-w-[200px]">
+                          <input
+                            type="file"
+                            onChange={handleFileChange}
+                            accept="image/jpeg,image/png,image/jpg"
+                            className="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-md file:border-0
+                          file:text-sm file:font-medium
+                          file:bg-blue-600 file:text-white
+                          hover:file:bg-blue-700 focus:outline-none
+                          dark:file:bg-blue-700 dark:file:text-gray-100
+                          dark:hover:file:bg-blue-600"
+                          />
+                        </div>
+                      )}
 
-                      <Button
-                        type="button"
-                        onClick={() => setCurrentView("camera")}
-                        variant="outline"
-                        className="min-w-[120px] primary"
-                      >
-                        Take Photo
-                      </Button>
+                      {!file && (
+                        <Button
+                          type="button"
+                          onClick={() => setCurrentView("camera")}
+                          variant="outline"
+                          className="min-w-[140px]"
+                        >
+                          Take Photo
+                        </Button>
+                      )}
                     </div>
 
                     {imagePreview && (
-                      <div className="mt-4 relative">
-                        <div className="relative h-15 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      <div className="mt-4 relative flex flex-col items-center">
+                        <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 p-1 border border-gray-300 dark:border-gray-600">
                           <img
                             src={imagePreview}
                             alt="Preview"
-                            className="h-full w-auto mx-auto object-contain"
+                            className="h-20 w-auto object-contain"
                           />
                         </div>
                         <Button
