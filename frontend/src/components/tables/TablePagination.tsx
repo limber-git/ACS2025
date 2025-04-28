@@ -1,4 +1,5 @@
 import Button from "../ui/button/Button";
+import { useState, useEffect } from "react";
 
 interface TablePaginationProps {
   page: number;
@@ -7,7 +8,10 @@ interface TablePaginationProps {
   loading: boolean;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  pageSizeOptions?: number[]; // Prop para personalizar las opciones de tamaño de página
 }
+
+const defaultPageSizeOptions = [5, 10, 20, 50];
 
 export default function TablePagination({
   page,
@@ -16,52 +20,71 @@ export default function TablePagination({
   loading,
   onPageChange,
   onLimitChange,
+  pageSizeOptions = defaultPageSizeOptions,
 }: TablePaginationProps) {
+  const totalPages = total !== null ? Math.ceil(total / limit) : 0;
+  const isFirstPage = page === 1;
+  const isLastPage = total !== null && page >= totalPages;
+
+  console.log("total", total);
+  // Efecto para evitar que la página sea mayor que el total de páginas
+  useEffect(() => {
+    if (total !== null && page > totalPages && totalPages > 0) {
+      onPageChange(totalPages);
+    }
+  }, [page, totalPages, onPageChange]);
+
   return (
     <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100 sm:justify-around">
       <div>
-        <span className="hidden sm:inline">Page</span> {page}
-        {total ? (
+        <span>Page </span> {page} <span>of </span> <span>{total}</span>
+        {/* {total !== null ? (
           <>
-            <span className="hidden sm:inline"> of </span>
             <span className="sm:hidden">-</span>
-            {Math.ceil(total / limit)}
+            {totalPages}
           </>
-        ) : ''}
+        ) : (
+          <span>(Loading...)</span>
+        )} */}
       </div>
       <div className="flex gap-2">
         <Button
           size="sm"
           variant="primary"
-          onClick={() => onPageChange(Math.max(1, page - 1))}
-          disabled={page === 1 || loading}
+          onClick={() => onPageChange(page - 1)}
+          disabled={isFirstPage || loading}
         >
-          Prev
+          Previous
         </Button>
         <Button
           size="sm"
           variant="primary"
-          onClick={() => onPageChange(total ? (page < Math.ceil(total / limit) ? page + 1 : page) : page + 1)}
-          disabled={!!total && page >= Math.ceil(total / limit) || loading}
+          onClick={() => onPageChange(page + 1)}
+          disabled={isLastPage || loading}
         >
           Next
         </Button>
       </div>
       <div>
-        <label>
-          <span className="hidden sm:inline">Pages:</span>
+        <label className="flex items-center gap-2">
+          <span>Items per page:</span>
           <select
-            className="ml-2 border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+            className="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-theme-xs"
             value={limit}
-            onChange={e => { onPageChange(1); onLimitChange(Number(e.target.value)); }}
+            onChange={(e) => {
+              onPageChange(1); // Reset to the first page when limit changes
+              onLimitChange(Number(e.target.value));
+            }}
             disabled={loading}
           >
-            {[5, 10, 20, 50].map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
             ))}
           </select>
         </label>
       </div>
     </div>
   );
-} 
+}

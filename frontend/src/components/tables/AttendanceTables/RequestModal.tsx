@@ -1,227 +1,28 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, Suspense, useCallback } from "react";
 import { api } from "../../../services/api";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
+import { RequestModalProps } from "../../../utils/attendance/constants";
+import { ApplicationFormData } from "../../../utils/attendance/constants";
+import { ModalView } from "../../../utils/attendance/constants";
+import {
+  extractHour,
+  formatDateEnglish,
+  getFileAsBase64,
+} from "../../../utils/attendance/recordUtils";
 
-interface RequestModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  record: any;
-  onSubmit: (data: ApplicationFormData) => void;
-}
-
-function extractHour(timeTable: string) {
-  const parts = timeTable.split(" ");
-  return parts.length > 1 ? parts[1] : timeTable;
-}
-
-function formatDateEnglish(dateStr: string) {
-  const dateObj = new Date(dateStr);
-  return dateObj.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-export interface ApplicationFormData {
-  recordId: string;
-  reason: string;
-  file?: string | null;
-  userId: string;
-  userName?: string;
-  regularDate: string;
-  regularTime: string;
-  type: string;
-}
-
-
-type ModalView = "form" | "camera" | "preview";
-
-const CameraView: React.FC<{
-  onCapture: (file: File, preview: string) => void;
-  onCancel: () => void;
-}> = ({ onCapture, onCancel }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  React.useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, []);
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-      }
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      alert("Could not access the camera. Please check permissions.");
-      onCancel();
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const file = new File([blob], "camera-capture.jpg", {
-                type: "image/jpeg",
-              });
-              const preview = URL.createObjectURL(blob);
-              onCapture(file, preview);
-            }
-          },
-          "image/jpeg",
-          0.8
-        );
-      }
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-[400px] sm:h-[500px]">
-      <div className="flex-1 relative bg-gray-900 p-4">
-        <div className="relative h-full rounded-lg overflow-hidden">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 pointer-events-none border-2 border-white/30 rounded-lg"></div>
-        </div>
-        <div className="absolute top-4 left-4">
-          <h3 className="text-white text-lg font-semibold">Take a Photo</h3>
-          <p className="text-white/70 text-sm">
-            Position your document within the frame
-          </p>
-        </div>
-      </div>
-      <div className="p-4 bg-white dark:bg-gray-800 flex justify-center space-x-4">
-        <Button
-          type="button"
-          onClick={capturePhoto}
-          variant="primary"
-          className="w-32"
-        >
-          Take Photo
-        </Button>
-        <Button
-          type="button"
-          onClick={onCancel}
-          variant="outline"
-          className="w-32"
-        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-const PreviewView: React.FC<{
-  imageUrl: string;
-  onConfirm: () => void;
-  onRetake: () => void;
-  onCancel: () => void;
-}> = ({ imageUrl, onConfirm, onRetake, onCancel }) => (
-  <div className="flex flex-col h-[500px] sm:h-[400px]">
-    <div className="flex-1 relative bg-gray-900 p-4">
-      <div className="relative h-full rounded-lg overflow-hidden bg-white/10">
-        <img
-          src={imageUrl}
-          alt="Preview"
-          className="absolute inset-0 w-full h-full object-contain"
-        />
-      </div>
-      <div className="absolute top-4 left-4">
-        <h3 className="text-white text-lg font-semibold">Preview</h3>
-        <p className="text-white/70 text-sm">
-          Check if the image is clear and readable
-        </p>
-      </div>
-    </div>
-    <div className="p-4 bg-white dark:bg-gray-800 flex justify-center space-x-4">
-      <Button
-        type="button"
-        onClick={onConfirm}
-        variant="primary"
-        className="w-32"
-      >
-        Confirm
-      </Button>
-      <Button
-        type="button"
-        onClick={onRetake}
-        variant="outline"
-        className="w-32"
-      >
-        Retake
-      </Button>
-      <Button
-        type="button"
-        onClick={onCancel}
-        variant="outline"
-        className="w-32"
-      >
-        Cancel
-      </Button>
-    </div>
-  </div>
+const LazyCameraView = React.lazy(() =>
+  import("./views/CameraView").then((module) => ({
+    default: module.CameraView,
+  }))
 );
 
-const convertToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const fileReader = new FileReader();
-    fileReader.readAsDataURL(file);
+const LazyPreviewView = React.lazy(() =>
+  import("./views/PreviewView").then((module) => ({
+    default: module.PreviewView,
+  }))
+);
 
-    fileReader.onload = () => {
-      if (fileReader.result) {
-        resolve(fileReader.result as string);
-      } else {
-        reject(new Error("Failed to convert file to base64"));
-      }
-    };
-
-    fileReader.onerror = (error) => {
-      reject(error);
-    };
-  });
-};
-
-const getFileAsBase64 = async (file: File): Promise<string> => {
-  // Para imágenes usamos convertToBase64
-  if (file.type.startsWith("image/")) {
-    return convertToBase64(file);
-  }
-  // Para PDFs y otros documentos
-  else if (file.type === "application/pdf") {
-    return convertToBase64(file);
-  }
-
-  throw new Error(`Unsupported file type: ${file.type}`);
-};
 
 const RequestModal: React.FC<RequestModalProps> = ({
   isOpen,
@@ -287,7 +88,8 @@ const RequestModal: React.FC<RequestModalProps> = ({
     setIsSubmitting(true);
     try {
       const userId = record?.userId || localStorage.getItem("userId") || "";
-      const userName = record?.recordName || localStorage.getItem("userName") || "";
+      const userName =
+        record?.recordName || localStorage.getItem("userName") || "";
 
       let imgUrl = null;
 
@@ -296,9 +98,12 @@ const RequestModal: React.FC<RequestModalProps> = ({
           const fileBase64 = await getFileAsBase64(file);
           const now = new Date();
           const formattedDate = now.toISOString().split("T")[0];
-          const fileType = file.type.startsWith("image/") ? "image" : "document";
-          const safeUserName = userName.replace(/[^a-zA-Z0-9_]/g, "") || 
-                             userId.replace(/[^a-zA-Z0-9_]/g, "");
+          const fileType = file.type.startsWith("image/")
+            ? "image"
+            : "document";
+          const safeUserName =
+            userName.replace(/[^a-zA-Z0-9_]/g, "") ||
+            userId.replace(/[^a-zA-Z0-9_]/g, "");
           const fileName = `${safeUserName}_${formattedDate}_${fileType}`;
 
           console.log("Uploading image to ImgBB...");
@@ -312,7 +117,10 @@ const RequestModal: React.FC<RequestModalProps> = ({
           console.log("Image uploaded successfully:", response.data);
         } catch (uploadError) {
           console.error("Error uploading image:", uploadError);
-          const errorMessage = uploadError instanceof Error ? uploadError.message : "Unknown error";
+          const errorMessage =
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Unknown error";
           const continueSubmission = window.confirm(
             `Failed to upload image (${errorMessage}). Do you want to continue without the image?`
           );
@@ -343,7 +151,9 @@ const RequestModal: React.FC<RequestModalProps> = ({
     } catch (error) {
       console.error("Error submitting application:", error);
       alert(
-        `Error submitting application: ${error instanceof Error ? error.message : "An unknown error occurred"}. Please try again.`
+        `Error submitting application: ${
+          error instanceof Error ? error.message : "An unknown error occurred"
+        }. Please try again.`
       );
     } finally {
       setIsSubmitting(false);
@@ -378,16 +188,23 @@ const RequestModal: React.FC<RequestModalProps> = ({
     switch (currentView) {
       case "camera":
         return (
-          <CameraView onCapture={handleCapture} onCancel={handleCameraCancel} />
+          <Suspense fallback={<div>Loading camera...</div>}>
+            <LazyCameraView
+              onCapture={handleCapture}
+              onCancel={handleCameraCancel}
+            />
+          </Suspense>
         );
       case "preview":
         return imagePreview ? (
-          <PreviewView
-            imageUrl={imagePreview}
-            onConfirm={handlePreviewConfirm}
-            onRetake={handlePreviewRetake}
-            onCancel={handlePreviewCancel}
-          />
+          <Suspense fallback={<div>Loading preview...</div>}>
+            <LazyPreviewView
+              imageSrc={imagePreview}
+              onConfirm={handlePreviewConfirm}
+              onRetake={handlePreviewRetake}
+              onCancel={handlePreviewCancel}
+            />
+          </Suspense>
         ) : null;
       default:
         return (

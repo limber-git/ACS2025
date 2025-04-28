@@ -12,42 +12,17 @@ import {
 import TableSkeleton from "./TableSkeleton";
 import DateRangeFilter from "../DateRangeFilter";
 import TablePagination from "../TablePagination";
-import { useModal } from "../../../hooks/useModal"; // Asegúrate de la ruta correcta
-import RequestModal, { ApplicationFormData } from './RequestModal'; // Asegúrate de la ruta correcta
-
-export interface AttendanceRecordCalculated {
-  date: string;
-  schedule: string;
-  onDuty: string;
-  offDuty: string;
-  clockIn: string | null;
-  clockOut: string | null;
-  late: boolean; // O number si ya son minutos
-  early: boolean; // O number si ya son minutos
-  situation: string | null;
-  needsApplication: boolean;
-  recordId: string;
-  recordName: string;
-  recordState: boolean;
-  userId: string;
-  applicationId: string | null;
-  applicationStatus: string | null;
-}
-
-function extractHour(timeTable: string) {
-  const parts = timeTable.split(" ");
-  return parts.length > 1 ? parts[1] : timeTable;
-}
-
-function formatDateEnglish(dateStr: string) {
-  const dateObj = new Date(dateStr);
-  return dateObj.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
+import { useModal } from "../../../hooks/useModal";
+import RequestModal from "./RequestModal";
+import {
+  ApplicationFormData,
+  stylesTable,
+} from "../../../utils/attendance/constants";
+import {
+  extractHour,
+  formatDateEnglish,
+} from "../../../utils/attendance/recordUtils";
+import { AttendanceRecordCalculated } from "../../../utils/attendance/constants";
 
 export default function AttendanceTable() {
   const [records, setRecords] = useState<AttendanceRecordCalculated[]>([]);
@@ -56,11 +31,9 @@ export default function AttendanceTable() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);
   const [total, setTotal] = useState<number | null>(null);
+
   const [cache, setCache] = useState<
-    Record<
-      string,
-      { records: AttendanceRecordCalculated[]; total: number | null }
-    >
+    Record<string, { records: AttendanceRecordCalculated[] }>
   >({});
   const { user } = useAuth();
   const [dateFilter, setDateFilter] = useState<{
@@ -72,101 +45,90 @@ export default function AttendanceTable() {
     totalPages: number;
   } | null>(null);
 
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const {
     isOpen: isRequestModalOpen,
     openModal: openRequestModal,
     closeModal: closeRequestModal,
   } = useModal();
-  const [selectedRecord, setSelectedRecord] = useState<any | null>(null); // Tipo 'any' o la interfaz de tu 'record'
+  const [selectedRecord, setSelectedRecord] =
+    useState<AttendanceRecordCalculated | null>(null);
 
-  const handleApplicationSubmit = async (data: ApplicationFormData) => {
-    const lt="00:30:00";
+  const fetchRecords = async (forceFetch: boolean = false) => {
+    const userId = user?.userId;
+    if (!userId) {
+      setError("No se encontró el usuario logueado.");
+      setLoading(false);
+      return;
+    }
+    const cacheKey = `${page}-${limit}-${dateFilter?.startDate ?? "none"}-${
+      dateFilter?.endDate ?? "none"
+    }`;
+
+    if (cache[cacheKey] && !forceFetch) {
+      setRecords(cache[cacheKey].records);
+      setLoading(false);
+      return;
+    }
+
     try {
-      if (!selectedRecord) {
-        throw new Error('No record selected');
+      setLoading(true);
+      const response = await api.getAttendanceByUserCalculated(
+        userId.toString(),
+        page,
+        limit,
+        dateFilter?.startDate,
+        dateFilter?.endDate
+      );
+      console.log("response", response);
+
+      let newRecords: AttendanceRecordCalculated[] = [];
+      if (Array.isArray(response)) {
+        newRecords = response;
+      } else {
+        newRecords = response.records || [];
+        setPagination(response.pagination || null);
       }
 
-      console.log('Enviando datos de aplicación:', { data, selectedRecord });
-      
-      // Enviar directamente el objeto como JSON
-      const response = await api.submitApplication({
+      setRecords(newRecords);
+
+      setCache((prev) => ({
+        ...prev,
+        [cacheKey]: { records: newRecords },
+      }));
+    } catch (error: any) {
+      setError(error.message || "Error al cargar los registros de asistencia.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplicationSubmit = async (data: ApplicationFormData) => {
+    const lt = "00:30:00";
+    try {
+      if (!selectedRecord) {
+        throw new Error("No record selected");
+      }
+      await api.submitApplication({
         recordId: data.recordId,
-        file: data.file, // URL de la imagen de ImgBB
+        file: data.file,
         userId: data.userId,
         reason: data.reason,
-        type: selectedRecord.situation, // Usar la situación del registro
+        type: selectedRecord.situation,
         regularDate: selectedRecord.date,
-        regularTime: selectedRecord.onDuty, // Extraer solo la hora del schedule
-        time: selectedRecord.clockIn? selectedRecord.late: lt,
+        regularTime: selectedRecord.onDuty,
+        time: selectedRecord.clockIn ? selectedRecord.late : lt,
       });
-      
-      // Actualizar la tabla después de enviar la solicitud
-      // await fetchRecords(); // Recargar los registros en lugar de solo limpiarlos
-      
-      return response;
+
+      await fetchRecords(true);
     } catch (error) {
-      console.error('Error submitting application:', error);
       throw error;
     }
   };
 
   useEffect(() => {
-    const fetchRecords = async () => {
-      const userId = user?.userId;
-      if (!userId) {
-        setError("No se encontró el usuario logueado.");
-        setLoading(false);
-        return;
-      }
-      const cacheKey = `${page}-${limit}-${dateFilter?.startDate ?? "none"}-${
-        dateFilter?.endDate ?? "none"
-      }`;
-      // Si la página está en cache, úsala y no hagas la petición
-      if (cache[cacheKey]) {
-        setRecords(cache[cacheKey].records);
-        setTotal(cache[cacheKey].total);
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const response = await api.getAttendanceByUserCalculated(
-          userId.toString(),
-          page,
-          limit,
-          dateFilter?.startDate,
-          dateFilter?.endDate
-        );
-        console.log("response", response);
-        let newRecords: AttendanceRecordCalculated[] = [];
-        let newTotal: number | null = null;
-        if (Array.isArray(response)) {
-          newRecords = response;
-          newTotal = null;
-        } else {
-          newRecords = response.records || [];
-          newTotal = response.pagination?.totalItems ?? null;
-        }
-        setRecords(newRecords);
-        setTotal(newTotal);
-        setCache((prev) => ({
-          ...prev,
-          [cacheKey]: { records: newRecords, total: newTotal },
-        }));
-      } catch (error: any) {
-        setError(
-          error.message || "Error al cargar los registros de asistencia."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRecords();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, page, limit, dateFilter]);
 
-  // Si cambias el usuario (logout/login), limpia el cache
   useEffect(() => {
     setCache({});
     setPage(1);
@@ -221,43 +183,26 @@ export default function AttendanceTable() {
         />
         <div className="max-w-full overflow-x-auto">
           <Table>
-            {/* Encabezado */}
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
+                <TableCell isHeader className={stylesTable.className}>
                   Date
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
+                <TableCell isHeader className={stylesTable.className}>
                   Schedule
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
+                <TableCell isHeader className={stylesTable.className}>
                   Clock In
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
+                <TableCell isHeader className={stylesTable.className}>
                   Clock Out
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-                >
+                <TableCell isHeader className={stylesTable.className}>
                   Actions
                 </TableCell>
               </TableRow>
             </TableHeader>
 
-            {/* Cuerpo */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
               {records.length === 0 ? (
                 <TableRow>
@@ -273,25 +218,23 @@ export default function AttendanceTable() {
               ) : (
                 records.map((record) => (
                   <TableRow key={record.recordId}>
-                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400">
                       {formatDateEnglish(record.date)}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400">
                       {extractHour(record.schedule)}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
+                    <TableCell className="px-5 py-4 text-theme-sm text-gray-800 dark:text-gray-100">
                       {record.clockIn}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
+                    <TableCell className="px-5 py-4 text-theme-sm text-gray-800 dark:text-gray-100">
                       {record.clockOut}
                     </TableCell>
-                    <TableCell className="px-2 py-2 text-gray-800 text-theme-sm dark:text-gray-400">
+                    <TableCell className="px-2 py-2 text-theme-sm text-gray-800 dark:text-gray-400">
                       {record.needsApplication ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-theme-xs dark:text-theme-dark-xs"
-                          disabled={false}
                           color={
                             record.applicationId
                               ? record.applicationStatus === "Pending"
@@ -308,8 +251,7 @@ export default function AttendanceTable() {
                               !record.applicationId &&
                               record.needsApplication
                             ) {
-                              setSelectedRecordId(record.recordId);
-                              setSelectedRecord(record); // Almacena el objeto 'record' completo
+                              setSelectedRecord(record);
                               openRequestModal();
                             }
                           }}
@@ -322,8 +264,6 @@ export default function AttendanceTable() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-theme-xs dark:text-theme-dark-xs"
-                          disabled={true}
                           color={
                             record.applicationStatus === "Pending"
                               ? "warning"
@@ -333,6 +273,7 @@ export default function AttendanceTable() {
                               ? "error"
                               : "default"
                           }
+                          disabled
                         >
                           {record.applicationStatus}
                         </Button>
@@ -344,7 +285,58 @@ export default function AttendanceTable() {
             </TableBody>
           </Table>
         </div>
+
         {/* Controles de paginación */}
+        {/* Controles de paginación */}
+        {/* <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
+          <div>
+            Page {page} {total ? `of ${Math.ceil(total / limit)}` : ""}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || loading}
+            >
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setPage((p) =>
+                  total ? (p < Math.ceil(total / limit) ? p + 1 : p) : p + 1
+                )
+              }
+              disabled={
+                (!!total && page >= Math.ceil(total / limit)) || loading
+              }
+            >
+              Next
+            </Button>
+          </div>
+          <div>
+            <label>
+              Pages:
+              <select
+                className="ml-2 border rounded px-2 py-1"
+                value={limit}
+                onChange={(e) => {
+                  setPage(1);
+                  setLimit(Number(e.target.value));
+                }}
+                disabled={loading}
+              >
+                {[5, 10, 20, 50].map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div> */}
         {records.length > 0 && (
           <TablePagination
             page={page}
