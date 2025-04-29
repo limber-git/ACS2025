@@ -160,12 +160,6 @@ module.exports = {
       const validatedLimit = Math.min(50, Math.max(1, parseInt(limit))); // Cap at 50 items per page
       const offset = (validatedPage - 1) * validatedLimit;
 
-      console.log("Controller - Fetching applications with:", {
-        userId,
-        page: validatedPage,
-        limit: validatedLimit,
-        offset,
-      });
 
       // Get paginated results and total count
       const { count, rows } = await Application.findAndCountAll({
@@ -178,6 +172,7 @@ module.exports = {
       // Map the results to our response format
       const records = rows.map((app) => ({
         applicationId: app.applicationId,
+        recordId: app.recordId,
         type: app.type,
         status: app.status,
         submissionDate: app.regularDate,
@@ -194,15 +189,6 @@ module.exports = {
       const totalPages = Math.ceil(count / validatedLimit);
       const hasNextPage = validatedPage < totalPages;
       const hasPreviousPage = validatedPage > 1;
-
-      console.log("Controller - Pagination info:", {
-        total: count,
-        totalPages,
-        currentPage: validatedPage,
-        hasNextPage,
-        hasPreviousPage,
-      });
-
       return {
         success: true,
         records,
@@ -224,25 +210,38 @@ module.exports = {
 
   getApplicationsCountForCurrentMonthById: async (userId) => {
     try {
-      // Obtener el primer y último día del mes actual como objetos Date
-      const startOfMonth = dayjs().startOf("month").toDate(); // Usamos toDate() para obtener un objeto Date
-      const endOfMonth = dayjs().endOf("month").toDate(); // Usamos toDate() para obtener un objeto Date
+      const startOfMonth = dayjs().startOf("month").toDate();
+      const endOfMonth = dayjs().endOf("month").toDate();
 
-      // Contar las aplicaciones del usuario en el mes actual
       const applicationsCount = await Application.count({
         where: {
           userId: userId,
           regularDate: {
-            [Op.between]: [startOfMonth, endOfMonth], // Filtrar por fecha en el mes actual
+            [Op.between]: [startOfMonth, endOfMonth],
           },
         },
       });
 
-      return applicationsCount; // Retorna el número de aplicaciones
+      return applicationsCount;
     } catch (error) {
       throw new Error(
         "Error fetching applications count by ID: " + error.message
       );
     }
   },
+  deleteApplication: async (applicationId) => {
+    try {
+      const application = await Application.findByPk(applicationId);
+      if (!application) {
+        throw new Error("Application not found");
+      }
+      await application.destroy();
+      return {
+        success: true,
+        message: "Application deleted successfully",
+      };
+    } catch (error) {
+      throw new Error("Error deleting application: " + error.message);
+    }
+  },  
 };

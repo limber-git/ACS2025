@@ -5,17 +5,12 @@ import {
   TableHeader,
   TableRow,
 } from "../../ui/table";
+import { TableSkeletonProps } from "../../../utils/attendance/constants";
 
-interface TableSkeletonProps {
-  rows?: number;
-  columns?: string[];
-  showHeader?: boolean;
-}
-
-export default function TableSkeleton({ 
-  rows = 5, 
-  columns = ['Date', 'Schedule', 'Clock In', 'Clock Out', 'Actions'],
-  showHeader = true
+export default function TableSkeleton({
+  rows = 5,
+  columns = ["Date", "Schedule", "Clock In", "Clock Out", "Actions"],
+  showHeader = true,
 }: TableSkeletonProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -39,12 +34,29 @@ export default function TableSkeleton({
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {[...Array(rows)].map((_, index) => (
               <TableRow key={index}>
-                {columns.map((_, cellIndex) => (
-                  <TableCell 
-                    key={cellIndex} 
-                    className={`px-${cellIndex === 0 ? '4' : '5'} py-${cellIndex === 0 ? '3' : '6'} text-gray-500 text-start text-theme-sm dark:text-gray-400`}
-                  >
-                    <div className="h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-700"></div>
+                {columns.map((column, cellIndex) => (
+                  <TableCell key={cellIndex} className="px-5 py-4">
+                    {column === "Actions" ? (
+                      <div
+                        className="h-8 w-20 bg-gray-200 rounded-md animate-pulse dark:bg-gray-700"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <div
+                        className="h-4 bg-gray-200 rounded-md animate-pulse dark:bg-gray-700"
+                        aria-hidden="true"
+                        style={{
+                          width:
+                            column === "Date"
+                              ? "250px"
+                              : column === "Schedule"
+                              ? "100px"
+                              : column === "Clock In" || column === "Clock Out"
+                              ? "80px"
+                              : "100px",
+                        }}
+                      />
+                    )}
                   </TableCell>
                 ))}
               </TableRow>

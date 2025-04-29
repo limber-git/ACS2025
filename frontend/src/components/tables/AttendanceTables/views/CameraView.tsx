@@ -29,7 +29,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
       } else {
-        // Si el componente ya no está montado, detenemos el stream inmediatamente
         stream.getTracks().forEach((track) => track.stop());
       }
     } catch (err) {

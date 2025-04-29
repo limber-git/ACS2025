@@ -1,5 +1,5 @@
 import Button from "../ui/button/Button";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 interface TablePaginationProps {
   page: number;
@@ -34,8 +34,6 @@ export default function TablePagination({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center px-4 py-4 text-gray-800 dark:text-gray-100 text-sm">
-      
-      {/* Info: Page X of Y */}
       <div className="text-center sm:text-left">
         {total !== null ? (
           <>
@@ -45,8 +43,6 @@ export default function TablePagination({
           <span>Loading...</span>
         )}
       </div>
-
-      {/* Buttons: Prev / Next */}
       <div className="flex justify-center gap-3">
         <Button
           size="sm"
@@ -67,8 +63,6 @@ export default function TablePagination({
           Next
         </Button>
       </div>
-
-      {/* Select: Items per page */}
       <div className="flex justify-center sm:justify-end items-center gap-2">
         <label htmlFor="pageSize" className="text-nowrap">Items:</label>
         <select

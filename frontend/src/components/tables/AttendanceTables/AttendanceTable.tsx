@@ -293,58 +293,6 @@ export default function AttendanceTable() {
             </TableBody>
           </Table>
         </div>
-
-        {/* Controles de paginación */}
-        {/* Controles de paginación */}
-        {/* <div className="flex justify-between items-center px-5 py-4 text-gray-800 text-theme-sm dark:text-gray-100">
-          <div>
-            Page {page} {total ? `of ${Math.ceil(total / limit)}` : ""}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
-            >
-              Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setPage((p) =>
-                  total ? (p < Math.ceil(total / limit) ? p + 1 : p) : p + 1
-                )
-              }
-              disabled={
-                (!!total && page >= Math.ceil(total / limit)) || loading
-              }
-            >
-              Next
-            </Button>
-          </div>
-          <div>
-            <label>
-              Pages:
-              <select
-                className="ml-2 border rounded px-2 py-1"
-                value={limit}
-                onChange={(e) => {
-                  setPage(1);
-                  setLimit(Number(e.target.value));
-                }}
-                disabled={loading}
-              >
-                {[5, 10, 20, 50].map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div> */}
         {records.length > 0 && (
           <TablePagination
             page={page}

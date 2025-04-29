@@ -40,6 +40,12 @@ interface AttendanceRecordCalculated { // Puedes crear una nueva interfaz para l
   applicationStatus: string | null;
 }
 
+interface User {
+  data: any;
+  userId: string;
+  fullName: string;
+  user: string;
+}
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -90,6 +96,11 @@ class ApiService {
     });
   }
 
+  async getUserById(userId: string): Promise<User> {
+    const endpoint = config.endpoints.auth.getUserById.replace(':id', userId);
+    return this.request<User>(endpoint);
+  }
+
   async getAttendanceByUser(
     userId: string, 
     page?: number, 
@@ -113,7 +124,9 @@ class ApiService {
     limit: number = 10,
     startDate?: string,
     endDate?: string
-  ): Promise<{ applications: Application[]; pagination: any }> {
+  ): Promise<{
+    pagination: any; records: Application[]; total: number; page: number; limit: number 
+}> {
     let endpoint = config.endpoints.auth.getApplicationsByUser.replace(':id', userId);
     const params: string[] = [];
     if (page !== undefined) params.push(`page=${page}`);
@@ -121,7 +134,7 @@ class ApiService {
     if (startDate) params.push(`startDate=${startDate}`);
     if (endDate) params.push(`endDate=${endDate}`);
     if (params.length > 0) endpoint += `?${params.join('&')}`;    
-    return this.request<{ applications: Application[]; pagination: any }>(endpoint);
+    return this.request<{ records: Application[]; total: number; page: number; limit: number; pagination: any }>(endpoint);
   }
   
   async getAttendanceByUserCalculated(
@@ -175,6 +188,20 @@ class ApiService {
     
     return this.request(endpoint, options);
   }
+
+  async deleteApplication(applicationId: string): Promise<any> {
+    const endpoint = config.endpoints.auth.deleteApplication.replace(':applicationId', applicationId);
+    const token = localStorage.getItem('token') || undefined;
+    
+    const options: RequestOptions = {
+      method: 'DELETE',
+      token: token || undefined
+    };
+    
+    return this.request(endpoint, options);
+  }
+
+  
 }
 
 export const api = new ApiService();

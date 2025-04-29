@@ -1,3 +1,5 @@
+import { Application } from "../../components/tables/ApplicationsTables/ApplicationsTable";
+
 // Estados de Aplicaciones
 export const APPLICATION_STATUS = {
   PENDING: 0,
@@ -54,6 +56,17 @@ export interface RequestModalProps {
   onSubmit: (data: ApplicationFormData) => void;
 }
 
+export interface TableSkeletonProps {
+  rows?: number;
+  columns?: string[];
+  showHeader?: boolean;
+}
+export interface ApplicationDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  application: Application | null;
+  onDeleted: () => void;
+}
 export interface FormViewProps {
   record: any;
   reason: string;

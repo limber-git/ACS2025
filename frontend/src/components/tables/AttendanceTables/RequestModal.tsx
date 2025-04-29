@@ -1,4 +1,4 @@
-import React, { useState, useRef, Suspense, useCallback } from "react";
+import React, { useState, Suspense} from "react";
 import { api } from "../../../services/api";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";

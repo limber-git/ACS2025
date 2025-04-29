@@ -9,7 +9,9 @@ export const config = {
       getApplicationsByUser: '/application/getApplicationsByUser/:id',
       getAttendanceByUserCalculated: '/record/getRecordsByUserCalculated/:id',
       submitApplication: '/application/createApplications',
-      uploadImage: '/application/upload-image'
+      uploadImage: '/application/upload-image',
+      getUserById: '/user/getUserById/:id',
+      deleteApplication: '/application/deleteApplication/:applicationId'
     }
   }
 };

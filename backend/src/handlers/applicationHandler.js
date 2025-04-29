@@ -1,4 +1,4 @@
-const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange, getApplicationsByUserId, uploadToImgBB } = require("../controllers/applicationController")
+const { postApplication, getAllApplications, getAllApplicationsById, getApplicationsCountForCurrentMonthById, updateApplication, getApplicationsByDateRange, getApplicationsByUserId, uploadToImgBB, deleteApplication } = require("../controllers/applicationController")
 
 module.exports = {
     uploadToImgBB: async (req, res) => {
@@ -132,6 +132,22 @@ module.exports = {
             res.status(200).json({
                 success: true,
                 data: applications
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message || error
+            });
+        }
+    },
+    deleteApplication: async (req, res) => {
+        try {
+            const { applicationId } = req.params;
+            const deletedApplication = await deleteApplication(applicationId);
+            res.status(200).json({
+                success: true,
+                message: 'The application was deleted correctly',
+                application: deletedApplication
             });
         } catch (error) {
             res.status(500).json({
