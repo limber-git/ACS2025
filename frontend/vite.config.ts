@@ -15,4 +15,8 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true, // O puedes usar '0.0.0.0'
+    port: 5173, // Asegúrate de que este sea el puerto en el que se ejecuta tu frontend
+  },
 });

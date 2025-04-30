@@ -1,5 +1,5 @@
 export const config = {
-  API_URL: 'http://localhost:3001/api',
+  API_URL: 'http://192.168.100.6:3001/api',
   endpoints: {
     auth: {
       login: '/user/login',

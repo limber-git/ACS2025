@@ -1,4 +1,4 @@
-import React, { useState, Suspense} from "react";
+import React, { useState, Suspense, useMemo } from "react";
 import { api } from "../../../services/api";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
@@ -10,6 +10,7 @@ import {
   formatDateEnglish,
   getFileAsBase64,
 } from "../../../utils/attendance/recordUtils";
+import Label from "../../form/Label";
 
 const LazyCameraView = React.lazy(() =>
   import("./views/CameraView").then((module) => ({
@@ -34,13 +35,14 @@ const RequestModal: React.FC<RequestModalProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentView, setCurrentView] = useState<ModalView>("form");
+  const [selectedType, setSelectedType] = useState("");
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       const validTypes = ["application/pdf", "image/jpeg", "image/png"];
       if (!validTypes.includes(selectedFile.type)) {
-        alert("Please upload only PDF, JPEG, or PNG files");
+        alert("Please upload, JPEG, or PNG files");
         return;
       }
       if (selectedFile.size > 5 * 1024 * 1024) {
@@ -60,6 +62,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
     setFile(null);
     setImagePreview(null);
     setReason("");
+    setSelectedType(record?.situation || ""); // Resetear al valor original
     setCurrentView("form");
     setIsSubmitting(false);
     onClose();
@@ -67,10 +70,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) {
-      alert("Please provide a justification");
-      return;
-    }
 
     if (!record) {
       console.error("Record data is missing.");
@@ -81,6 +80,20 @@ const RequestModal: React.FC<RequestModalProps> = ({
     if (!record.recordId) {
       console.error("Record ID is missing.");
       alert("Cannot submit request: Record ID is missing.");
+      return;
+    }
+
+    if (
+      selectedType !== "Vacation" &&
+      selectedType !== "Sick" &&
+      !reason.trim()
+    ) {
+      alert("Please provide a justification");
+      return;
+    }
+
+    if ((selectedType === "Vacation" || selectedType === "Sick") && !file) {
+      alert("Please upload a supporting document for Vacation or Sick leave.");
       return;
     }
 
@@ -103,7 +116,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
           const safeUserName =
             userName.replace(/[^a-zA-Z0-9_]/g, "") ||
             userId.replace(/[^a-zA-Z0-9_]/g, "");
-          const fileName = `${safeUserName}_${formattedDate}_${fileType}`;
+          const fileName = `<span class="math-inline">\{safeUserName\}\_</span>{formattedDate}_${fileType}`;
 
           const response = await api.uploadImageToImgBB(fileBase64, fileName);
 
@@ -128,19 +141,27 @@ const RequestModal: React.FC<RequestModalProps> = ({
 
       const applicationData: ApplicationFormData = {
         recordId: record.recordId,
-        reason,
+        reason:
+          selectedType === "Vacation" || selectedType === "Sick"
+            ? reason
+            : reason, // Mantener reason si es necesario
         userId,
         userName,
         file: imgUrl,
         regularDate: record.date,
         regularTime: extractHour(record.schedule),
-        type: record.situation || "N/A",
+        type: selectedType, // Usar el tipo seleccionado
+        state:
+          (selectedType === "Vacation" || selectedType === "Sick") && file
+            ? "Approved"
+            : "Pending", // Lógica de aprobación automática
       };
       await onSubmit(applicationData);
 
       setFile(null);
       setImagePreview(null);
       setReason("");
+      setSelectedType(record?.situation || "");
       handleClose();
     } catch (error) {
       alert(
@@ -176,6 +197,72 @@ const RequestModal: React.FC<RequestModalProps> = ({
     setImagePreview(null);
     setCurrentView("form");
   };
+
+  const typeOptions = useMemo(() => {
+    const options = [];
+    // Si hay una situación en el record, permitirla como opción (y seleccionarla por defecto)
+    if (record?.situation) {
+      options.push({ value: record.situation, label: record.situation });
+    }
+    // Agregar las opciones de reemplazo/justificación comunes
+    const commonOptions = [
+      { value: "Vacation", label: "Vacation" },
+      { value: "Sick", label: "Sick" },
+      { value: "Commission", label: "Commission" },
+      { value: "Replacement", label: "Replacement" },
+    ];
+    // Agregar opciones específicas según la falta de clock-in/out o retrasos
+    if (!record?.clockIn && !record?.clockOut) {
+      options.push(...commonOptions);
+    } else if (!record?.clockIn) {
+      options.push(
+        { value: "Missed Check-in", label: "Missed Check-in" },
+        {
+          value: "Checked in without marking",
+          label: "Checked in without marking",
+        }
+      );
+    } else if (!record?.clockOut) {
+      options.push(
+        { value: "Missed Check-out", label: "Missed Check-out" },
+        { value: "Left Early", label: "Left Early" },
+        { value: "Left without marking", label: "Left without marking" },
+        { value: "Left late", label: "Left late" }
+      );
+    } else if (record?.late != null) {
+      options.push({ value: "Arrived Late", label: "Arrived Late" });
+    } else if (record?.early != null) {
+      options.push({ value: "Left Early", label: "Left Early" });
+    } else {
+      options.push(
+        ...commonOptions.filter(
+          (opt) => opt.value !== "Vacation" && opt.value !== "Sick"
+        )
+      ); // Si no hay issue específico, mostrar otras opciones
+    }
+
+    // Eliminar duplicados (en caso de que la situación ya esté en las opciones comunes)
+    const uniqueOptions = options.filter(
+      (option, index, self) =>
+        index === self.findIndex((o) => o.value === option.value)
+    );
+
+    return uniqueOptions;
+  }, [record]);
+
+  const isAutoApprovable = useMemo(() => {
+    const keywords = [
+      "certificado",
+      "médico",
+      "reposo",
+      "hospital",
+      "vacaciones",
+      "viaje",
+    ];
+    return (
+      keywords.some((word) => reason.toLowerCase().includes(word)) && !!file
+    );
+  }, [reason, file]);
 
   const modalContent = () => {
     switch (currentView) {
@@ -252,50 +339,118 @@ const RequestModal: React.FC<RequestModalProps> = ({
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-0">
+                <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                  {/* Tipo de justificación */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Justification
+                    <label
+                      htmlFor="justificationType"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                    >
+                      Type of Justification
                     </label>
-                    <textarea
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 text-gray-700 dark:text-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
-                      rows={4}
-                      placeholder="Enter your justification here..."
-                      required
-                    />
+
+                    <select
+                      id="justificationType"
+                      value={selectedType}
+                      onChange={(e) => setSelectedType(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2.5 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                    >
+                      <option value="">-- Select an option --</option>
+                      {typeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Mensaje de autoaprobación */}
+                    {isAutoApprovable && (
+                      <div className="mt-3 rounded-lg border border-green-400 bg-green-50 p-3 text-sm font-medium text-green-700 dark:border-green-600 dark:bg-green-900/30 dark:text-green-300">
+                        Justificación detectada como válida con comprobante.
+                        Esta solicitud será aprobada automáticamente.
+                      </div>
+                    )}
+
+                    {/* Mensaje para Vacation o Sick */}
+                    {(selectedType === "Vacation" ||
+                      selectedType === "Sick") && (
+                      <div className="mt-3 text-yellow-700 dark:text-yellow-300 text-sm italic">
+                        Please upload the supporting document (e.g. medical or
+                        vacation proof). You can add additional details below if
+                        needed.
+                      </div>
+                    )}
                   </div>
 
+                  {/* Campo de texto solo si no es vacation/sick */}
+                  {selectedType !== "Vacation" && selectedType !== "Sick" ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Justification
+                      </label>
+                      <textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 text-gray-700 dark:text-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                        rows={3}
+                        placeholder="Enter your justification here..."
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Justification{" "}
+                        <span className="text-gray-500 dark:text-gray-400">
+                          (Optional)
+                        </span>
+                      </label>
+                      <textarea
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 text-gray-700 dark:text-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                        rows={2}
+                        placeholder="Enter additional details if needed..."
+                      />
+                    </div>
+                  )}
+                  {/* Advertencia si es sick o vacation y no subió archivo aún */}
+                  {(selectedType === "vacation" || selectedType === "sick") &&
+                    !file && (
+                      <div className="mt-4 flex items-start gap-2 text-red-800 bg-red-50 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-500 p-3 rounded-lg text-sm">
+                        {/* <Info className="w-5 h-5 mt-0.5 shrink-0" /> */}
+                        <span>
+                          This justification requires you to upload a
+                          certificate (e.g., a medical certificate or vacation
+                          document).
+                          <br />
+                          If you decide not to upload the file, the request will
+                          be sent as <strong>pending</strong> and must be
+                          reviewed by a supervisor.
+                        </span>
+                      </div>
+                    )}
+
+                  {/* Adjuntar archivo / tomar foto */}
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
                       {!file && (
-                        <div className="flex-1 min-w-[200px]">
+                        <>
                           <input
                             type="file"
                             onChange={handleFileChange}
-                            accept="image/jpeg,image/png,image/jpg"
-                            className="block w-full text-sm text-gray-500
-                          file:mr-4 file:py-2 file:px-4
-                          file:rounded-md file:border-0
-                          file:text-sm file:font-medium
-                          file:bg-blue-600 file:text-white
-                          hover:file:bg-blue-700 focus:outline-none
-                          dark:file:bg-blue-700 dark:file:text-gray-100
-                          dark:hover:file:bg-blue-600"
+                            accept="image/jpeg,image/png,application/pdf"
+                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700 focus:outline-none dark:file:bg-blue-700 dark:file:text-gray-100 dark:hover:file:bg-blue-600"
                           />
-                        </div>
-                      )}
-
-                      {!file && (
-                        <Button
-                          type="button"
-                          onClick={() => setCurrentView("camera")}
-                          variant="outline"
-                          className="min-w-[140px]"
-                        >
-                          Take Photo
-                        </Button>
+                          <Button
+                            type="button"
+                            onClick={() => setCurrentView("camera")}
+                            variant="outline"
+                            className="min-w-[140px]"
+                          >
+                            Take Photo
+                          </Button>
+                        </>
                       )}
                     </div>
 
@@ -323,7 +478,8 @@ const RequestModal: React.FC<RequestModalProps> = ({
                     )}
                   </div>
 
-                  <div className="flex justify-end space-x-3 mt-6">
+                  {/* Botones */}
+                  <div className="flex justify-end space-x-3 pt-6">
                     <Button
                       type="button"
                       variant="outline"
@@ -332,7 +488,6 @@ const RequestModal: React.FC<RequestModalProps> = ({
                     >
                       Cancel
                     </Button>
-
                     <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "Submitting..." : "Submit Request"}
                     </Button>

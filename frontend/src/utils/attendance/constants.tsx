@@ -46,6 +46,7 @@ export interface ApplicationFormData {
   regularDate: string;
   regularTime: string;
   type: string;
+  state: string;
 }
 
 // Props para los componentes
