@@ -10,8 +10,7 @@ import {
   formatDateEnglish,
   getFileAsBase64,
 } from "../../../utils/attendance/recordUtils";
-import Label from "../../form/Label";
-
+import { reviewerText } from "../../../utils/attendance/applicationUtils";
 const LazyCameraView = React.lazy(() =>
   import("./views/CameraView").then((module) => ({
     default: module.CameraView,
@@ -108,14 +107,14 @@ const RequestModal: React.FC<RequestModalProps> = ({
       if (file) {
         try {
           const fileBase64 = await getFileAsBase64(file);
-          const now = new Date();
-          const formattedDate = now.toISOString().split("T")[0];
+          // const now = new Date();
+          // const formattedDate = now.toISOString().split("T")[0];
           const fileType = file.type.startsWith("image/")
             ? "image"
             : "document";
-          const safeUserName =
-            userName.replace(/[^a-zA-Z0-9_]/g, "") ||
-            userId.replace(/[^a-zA-Z0-9_]/g, "");
+          // const safeUserName =
+          //   userName.replace(/[^a-zA-Z0-9_]/g, "") ||
+          //   userId.replace(/[^a-zA-Z0-9_]/g, "");
           const fileName = `<span class="math-inline">\{safeUserName\}\_</span>{formattedDate}_${fileType}`;
 
           const response = await api.uploadImageToImgBB(fileBase64, fileName);
@@ -141,21 +140,20 @@ const RequestModal: React.FC<RequestModalProps> = ({
 
       const applicationData: ApplicationFormData = {
         recordId: record.recordId,
-        reason:
-          selectedType === "Vacation" || selectedType === "Sick"
-            ? reason
-            : reason, // Mantener reason si es necesario
+        reason: reason,
         userId,
         userName,
         file: imgUrl,
         regularDate: record.date,
         regularTime: extractHour(record.schedule),
-        type: selectedType, // Usar el tipo seleccionado
-        state:
+        type: selectedType ? selectedType : record.situation,
+        state: true,
+        status:
           (selectedType === "Vacation" || selectedType === "Sick") && file
             ? "Approved"
             : "Pending", // Lógica de aprobación automática
       };
+      console.log("applicationData RequestModal", applicationData);
       await onSubmit(applicationData);
 
       setFile(null);
@@ -251,18 +249,8 @@ const RequestModal: React.FC<RequestModalProps> = ({
   }, [record]);
 
   const isAutoApprovable = useMemo(() => {
-    const keywords = [
-      "certificado",
-      "médico",
-      "reposo",
-      "hospital",
-      "vacaciones",
-      "viaje",
-    ];
-    return (
-      keywords.some((word) => reason.toLowerCase().includes(word)) && !!file
-    );
-  }, [reason, file]);
+    return (selectedType === "Vacation" || selectedType === "Sick") && !!file;
+  }, [selectedType, file]);
 
   const modalContent = () => {
     switch (currentView) {
@@ -346,7 +334,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
                       htmlFor="justificationType"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-200"
                     >
-                      Type of Justification
+                      Type of Justification (optional)
                     </label>
 
                     <select
@@ -366,20 +354,19 @@ const RequestModal: React.FC<RequestModalProps> = ({
                     {/* Mensaje de autoaprobación */}
                     {isAutoApprovable && (
                       <div className="mt-3 rounded-lg border border-green-400 bg-green-50 p-3 text-sm font-medium text-green-700 dark:border-green-600 dark:bg-green-900/30 dark:text-green-300">
-                        Justificación detectada como válida con comprobante.
-                        Esta solicitud será aprobada automáticamente.
+                        Justification detected as valid with proof. This request
+                        will be approved automatically.
                       </div>
                     )}
 
                     {/* Mensaje para Vacation o Sick */}
-                    {(selectedType === "Vacation" ||
-                      selectedType === "Sick") && (
-                      <div className="mt-3 text-yellow-700 dark:text-yellow-300 text-sm italic">
-                        Please upload the supporting document (e.g. medical or
-                        vacation proof). You can add additional details below if
-                        needed.
-                      </div>
-                    )}
+                    {(selectedType === "Vacation" || selectedType === "Sick") &&
+                      !file && (
+                        <div className="mt-3 text-yellow-700 dark:text-yellow-300 text-sm italic">
+                          Please upload the supporting document (e.g. medical or
+                          vacation proof) to be automatically approved.
+                        </div>
+                      )}
                   </div>
 
                   {/* Campo de texto solo si no es vacation/sick */}

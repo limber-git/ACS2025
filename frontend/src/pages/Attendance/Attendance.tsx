@@ -1,16 +1,11 @@
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import ComponentCard from "../../components/common/ComponentCard";
 import AttendanceTable from "../../components/tables/AttendanceTables/AttendanceTable";
 
-export default function BasicTables() {
+export default function Attendance() {
   return (
     <>
       <PageBreadcrumb pageTitle="Attendance Table" />
-      <div className="space-y-6">
-        <ComponentCard title="Attendance">
-          <AttendanceTable/>
-        </ComponentCard>
-      </div>
+        <AttendanceTable />
     </>
   );
 }

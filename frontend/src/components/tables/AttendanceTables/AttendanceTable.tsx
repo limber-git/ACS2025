@@ -89,9 +89,9 @@ export default function AttendanceTable() {
         const totalItems = response.total || 0;
         setPagination({
           totalItems,
-          totalPages: Math.ceil(totalItems / limit)
+          totalPages: Math.ceil(totalItems / limit),
         });
-        console.log('Setting pagination with total:', totalItems);
+        console.log("Setting pagination with total:", totalItems);
       }
 
       setRecords(newRecords);
@@ -109,6 +109,7 @@ export default function AttendanceTable() {
 
   const handleApplicationSubmit = async (data: ApplicationFormData) => {
     const lt = "00:30:00";
+    const normalTime = "00:00:00";
     try {
       if (!selectedRecord) {
         throw new Error("No record selected");
@@ -118,10 +119,17 @@ export default function AttendanceTable() {
         file: data.file,
         userId: data.userId,
         reason: data.reason,
-        type: selectedRecord.situation,
+        type: data.type,
         regularDate: selectedRecord.date,
         regularTime: selectedRecord.onDuty,
-        time: selectedRecord.clockIn ? selectedRecord.late : lt,
+        reviewDate: data.status === "Approved" ? Date.now() : null,
+        time:
+          data.status === "Approved"
+            ? normalTime
+            : selectedRecord.clockIn
+            ? selectedRecord.late
+            : lt,
+        status: data.status ? data.status : "Pending",
       });
 
       await fetchRecords(true);

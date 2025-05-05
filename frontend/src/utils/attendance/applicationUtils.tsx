@@ -57,6 +57,8 @@ export async function prepareApplicationData(
     file: imgUrl,
     regularDate: record.date,
     regularTime: record.onDuty,
+    state: record.state,
+    status: record.status,
     type: record.situation || 'Attendance Issue',
   };
 }
@@ -78,3 +80,9 @@ export function validateApplicationData(data: Partial<ApplicationFormData>): str
   }
   return null;
 }
+export const reviewerText = (loadingReviewer: boolean, reviewerName: string | null, application: any) => loadingReviewer
+  ? "Loading..."
+  : `${reviewerName || "Not reviewed yet"}${
+      application.status === "Approved" ? " - Approved by prof" : ""
+    }`;
+

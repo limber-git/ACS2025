@@ -46,7 +46,8 @@ export interface ApplicationFormData {
   regularDate: string;
   regularTime: string;
   type: string;
-  state: string;
+  state: boolean;
+  status: string;
 }
 
 // Props para los componentes
@@ -93,6 +94,6 @@ export interface PreviewViewProps {
   onCancel: () => void;
 }
 export const stylesTable = {
-  className: "px-5 py-3 text-start text-theme-xs text-gray-500 dark:text-gray-400"
+  className: "px-5 py-3 text-start text-theme-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell"
 }
   

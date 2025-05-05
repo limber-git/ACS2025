@@ -51,7 +51,7 @@ module.exports = {
   postApplication: async (applicationData) => {
     console.log(applicationData);
     try {
-      const { recordId, userId, reason, file, regularDate, regularTime, type, time } =
+      const { recordId, userId, reason, file, regularDate, regularTime, type, time, status,reviewDate } =
         applicationData;
 
       let fileData = null;
@@ -76,7 +76,8 @@ module.exports = {
         time,
         type,
         img: fileData ? fileData.url : null,
-        status: "Pending", // este sí, lo pones fijo
+        status: status ? status : "Pending", // este sí, lo pones fijo
+        reviewDate: reviewDate ? reviewDate : null,
       });
 
       return {

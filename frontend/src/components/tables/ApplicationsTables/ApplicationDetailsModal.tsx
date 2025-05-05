@@ -9,13 +9,12 @@ const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = ({
   isOpen,
   onClose,
   application,
-  onDeleted
+  onDeleted,
 }) => {
   const [reviewerName, setReviewerName] = useState<string | null>(null);
   const [loadingReviewer, setLoadingReviewer] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  
   useEffect(() => {
     const fetchReviewerName = async () => {
       if (!application?.by) {
@@ -59,7 +58,7 @@ const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = ({
     try {
       setDeleting(true);
       await api.deleteApplication(application.applicationId); // Asegúrate que exista esta función
-      if(onDeleted){
+      if (onDeleted) {
         onDeleted();
       }
       onClose();
@@ -148,12 +147,16 @@ const ApplicationDetailsModal: React.FC<ApplicationDetailsModalProps> = ({
               <p className="font-medium text-gray-800 dark:text-white">
                 {loadingReviewer
                   ? "Loading..."
-                  : reviewerName || "Not reviewed yet"}
+                  : reviewerName
+                  ? reviewerName
+                  : application.status === "Approved"
+                  ? "Approved by prof"
+                  : "Not reviewed yet"}
               </p>
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className={`mt-4 ${application.reason ? "" : "hidden"}`}>
             <p className="text-sm text-gray-500 dark:text-gray-400">Reason</p>
             <p className="font-medium text-gray-800 dark:text-white bg-white dark:bg-gray-700 p-3 rounded-md mt-1 border border-gray-200 dark:border-gray-600">
               {application.reason}
