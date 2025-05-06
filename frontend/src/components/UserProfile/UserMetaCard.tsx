@@ -3,12 +3,75 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { useState, useEffect } from "react";
+import { api } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+interface UserData {
+  userId: number;
+  email: string;
+  user: string;
+  fullName: string;
+  supervisors: string[];
+  type: string;
+  role: string;
+  state: boolean;
+}
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    email: "",
+    user: "",
+    fullName: "",
+    type: "",
+    role: "",
+    state: true
+  });
+
+  const { user } = useAuth();
+
+  useEffect(() => {
+      // Aquí se haría la llamada a la API para obtener los datos del usuario
+      const fetchUserData = async () => {
+        try {
+          const response = await api.getUserById(user?.userId.toString() || "");
+          console.log(response.data);
+          setUserData(response.data);
+        } catch (error) {
+          console.error("Error al obtener los datos del usuario:", error);
+        }
+      };
+      fetchUserData();
+      setLoading(false);
+    }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleToggleState = () => {
+    setFormData(prev => ({
+      ...prev,
+      state: !prev.state
+    }));
+  };
+
   const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
+    // Aquí se haría la llamada a la API para actualizar los datos del usuario
+    console.log("Guardando cambios:", formData);
+    // Actualizar los datos locales después de guardar
+    if (userData) {
+      setUserData({
+        ...userData,
+        ...formData
+      });
+    }
     closeModal();
   };
   return (
@@ -20,18 +83,30 @@ export default function UserMetaCard() {
               <img src="/images/user/owner.jpg" alt="user" />
             </div>
             <div className="order-3 xl:order-2">
-              <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
-                Musharof Chowdhury
-              </h4>
-              <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Team Manager
-                </p>
-                <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Arizona, United States
-                </p>
-              </div>
+              {loading ? (
+                <p>Cargando información del usuario...</p>
+              ) : userData ? (
+                <>
+                  <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
+                    {userData.fullName}
+                  </h4>
+                  <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {userData.role}
+                    </p>
+                    <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {userData.type}
+                    </p>
+                    <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {userData.state ? "Activo" : "Inactivo"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p>No se pudo cargar la información del usuario</p>
+              )}
             </div>
             <div className="flex items-center order-2 gap-2 grow xl:order-3 xl:justify-end">
               <a
@@ -154,68 +229,95 @@ export default function UserMetaCard() {
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input
-                      type="text"
-                      value="https://www.facebook.com/PimjoHQ"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value="https://x.com/PimjoHQ" />
-                  </div>
-
-                  <div>
-                    <Label>Linkedin</Label>
-                    <Input
-                      type="text"
-                      value="https://www.linkedin.com/company/pimjo"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value="https://instagram.com/PimjoHQ" />
-                  </div>
-                </div>
-              </div>
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
+                  Información de Usuario
                 </h5>
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value="Musharof" />
+                    <Label>ID de Usuario</Label>
+                    <Input 
+                      type="text" 
+                      value={userData?.userId.toString() || ""} 
+                      disabled
+                    />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value="Chowdhury" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="text" value="randomuser@pimjo.com" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Phone</Label>
-                    <Input type="text" value="+09 363 398 46" />
+                    <Label>Nombre de Usuario</Label>
+                    <Input 
+                      type="text" 
+                      name="user" 
+                      value={formData.user} 
+                      onChange={handleChange} 
+                    />
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Bio</Label>
-                    <Input type="text" value="Team Manager" />
+                    <Label>Nombre Completo</Label>
+                    <Input 
+                      type="text" 
+                      name="fullName" 
+                      value={formData.fullName} 
+                      onChange={handleChange} 
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Correo Electrónico</Label>
+                    <Input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                    />
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Tipo</Label>
+                    <select 
+                      name="type" 
+                      value={formData.type} 
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 focus:border-primary focus:ring-0 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-primary"
+                    >
+                      <option value="">Seleccionar tipo</option>
+                      <option value="Empleado">Empleado</option>
+                      <option value="Contratista">Contratista</option>
+                      <option value="Administrador">Administrador</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Rol</Label>
+                    <select 
+                      name="role" 
+                      value={formData.role} 
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 focus:border-primary focus:ring-0 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-primary"
+                    >
+                      <option value="">Seleccionar rol</option>
+                      <option value="Usuario">Usuario</option>
+                      <option value="Editor">Editor</option>
+                      <option value="Administrador">Administrador</option>
+                    </select>                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Estado</Label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="stateToggle" 
+                        checked={formData.state} 
+                        onChange={handleToggleState}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600 dark:bg-gray-900"
+                      />
+                      <label htmlFor="stateToggle" className="text-sm text-gray-600 dark:text-gray-300">
+                        {formData.state ? "Activo" : "Inactivo"}
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -3,9 +3,40 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
-
+import { useEffect, useState } from "react";
+import { api } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+interface UserData {
+  userId: number;
+  email: string;
+  user: string;
+  fullName: string;
+  supervisors: string[];
+  type: string;
+  role: string;
+  state: boolean;
+  password: string;
+}
 export default function UserAddressCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const { user } = useAuth();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Aquí se haría la llamada a la API para obtener los datos del usuario
+    const fetchUserData = async () => {
+      try {
+        const response = await api.getUserById(user?.userId.toString() || "");
+        console.log(response.data);
+        setUserData(response.data);
+      } catch (error) {
+        console.error("Error al obtener los datos del usuario:", error);
+      }
+    };
+    fetchUserData();
+    setLoading(false);
+  }, [user]);
   const handleSave = () => {
     // Handle save logic here
     console.log("Saving changes...");
@@ -17,43 +48,25 @@ export default function UserAddressCard() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-              Address
+              Login information
             </h4>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Country
+                  Login
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  United States.
+                  {userData?.user}
                 </p>
               </div>
 
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  City/State
+                  Password
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Phoenix, Arizona, United States.
-                </p>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Postal Code
-                </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  ERT 2489
-                </p>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  TAX ID
-                </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  AS4568384
+                <p className="text-sm font-medium text-gray-800 dark:text-white/90 cursor-pointer">
+                  {"*".repeat(userData?.password?.length || 8)}
                 </p>
               </div>
             </div>

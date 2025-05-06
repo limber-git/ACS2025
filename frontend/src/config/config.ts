@@ -11,7 +11,7 @@ export const config = {
       submitApplication: '/application/createApplications',
       uploadImage: '/application/upload-image',
       getUserById: '/user/getUserById/:id',
-      deleteApplication: '/application/deleteApplication/:applicationId'
+      deleteApplication: '/application/deleteApplication/:applicationId',
     }
   }
 };

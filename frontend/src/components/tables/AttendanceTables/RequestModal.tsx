@@ -10,7 +10,6 @@ import {
   formatDateEnglish,
   getFileAsBase64,
 } from "../../../utils/attendance/recordUtils";
-import { reviewerText } from "../../../utils/attendance/applicationUtils";
 const LazyCameraView = React.lazy(() =>
   import("./views/CameraView").then((module) => ({
     default: module.CameraView,

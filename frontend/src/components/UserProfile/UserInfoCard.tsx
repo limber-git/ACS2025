@@ -3,12 +3,89 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { useState, useEffect } from "react";
+import { api } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+
+interface UserData {
+  userId: number;
+  email: string;
+  user: string;
+  fullName: string;
+  supervisors: string[];
+  type: string;
+  role: string;
+  state: boolean;
+  phone?: string;
+}
+interface NameParts {
+  firstName: string;
+  lastName: string;
+}
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    email: "",
+    user: "",
+    fullName: "",
+    type: "",
+    role: "",
+    phone: "",
+  });
+
+  const { user } = useAuth();
+  useEffect(() => {
+    // Aquí se haría la llamada a la API para obtener los datos del usuario
+    const fetchUserData = async () => {
+      try {
+        const response = await api.getUserById(user?.userId.toString() || "");
+        console.log(response.data);
+        setUserData(response.data);
+      } catch (error) {
+        console.error("Error al obtener los datos del usuario:", error);
+      }
+    };
+    fetchUserData();
+    setLoading(false);
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const separateFullName = (fullName: string | undefined): NameParts => {
+    if (!fullName) {
+      return { firstName: "", lastName: "" };
+    }
+    const parts = fullName.trim().split(" ");
+    if (parts.length === 1) {
+      return { firstName: parts[0], lastName: "" };
+    }
+    const lastName = parts.slice(-1).join(" ");
+    const firstName = parts.slice(0, -1).join(" ");
+    return { firstName, lastName };
+  };
+  const { firstName, lastName } = separateFullName(userData?.fullName);
+
   const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
+    // Aquí se haría la llamada a la API para actualizar los datos del usuario
+    console.log("Guardando cambios:", formData);
+    // Actualizar los datos locales después de guardar
+    if (userData) {
+      setUserData({
+        ...userData,
+        ...formData,
+      });
+    }
     closeModal();
   };
   return (
@@ -25,7 +102,7 @@ export default function UserInfoCard() {
                 First Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Musharof
+                {firstName}
               </p>
             </div>
 
@@ -34,7 +111,7 @@ export default function UserInfoCard() {
                 Last Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Chowdhury
+                {lastName}
               </p>
             </div>
 
@@ -43,7 +120,7 @@ export default function UserInfoCard() {
                 Email address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                randomuser@pimjo.com
+                {userData?.email}
               </p>
             </div>
 
@@ -52,16 +129,16 @@ export default function UserInfoCard() {
                 Phone
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                +09 363 398 46
+                {userData?.phone ? userData.phone : "--------"}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
+                Type
               </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Team Manager
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90 capitalize">
+                {userData?.type}
               </p>
             </div>
           </div>
@@ -102,39 +179,6 @@ export default function UserInfoCard() {
           </div>
           <form className="flex flex-col">
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input
-                      type="text"
-                      value="https://www.facebook.com/PimjoHQ"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value="https://x.com/PimjoHQ" />
-                  </div>
-
-                  <div>
-                    <Label>Linkedin</Label>
-                    <Input
-                      type="text"
-                      value="https://www.linkedin.com/company/pimjo"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value="https://instagram.com/PimjoHQ" />
-                  </div>
-                </div>
-              </div>
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
                   Personal Information
@@ -142,28 +186,63 @@ export default function UserInfoCard() {
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value="Musharof" />
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      name="email"
+                      value={userData?.email}
+                      onChange={handleChange}
+                    />
                   </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value="Chowdhury" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="text" value="randomuser@pimjo.com" />
-                  </div>
-
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Phone</Label>
-                    <Input type="text" value="+09 363 398 46" />
+                    <Input
+                      type="text"
+                      name="phone"
+                      placeholder="0000000"
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Full Name</Label>
+                    <Input
+                      type="text"
+                      name="fullName"
+                      disabled
+                      value={userData?.fullName}
+                      onChange={handleChange}
+                    />
                   </div>
 
-                  <div className="col-span-2">
-                    <Label>Bio</Label>
-                    <Input type="text" value="Team Manager" />
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label> Department</Label>
+                    <select
+                      name="Department"
+                      value={userData?.type}
+                      disabled
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 focus:border-primary focus:ring-0 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-primary"
+                    >
+                      <option className="capitalize" value="">
+                        {userData?.type}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-2 lg:col-span-1">
+                    <Label>Role</Label>
+                    <select
+                      name="role"
+                      value={userData?.role}
+                      disabled
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-600 focus:border-primary focus:ring-0 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-primary"
+                    >
+                      <option value="">
+                        {userData?.role == "admin" ? "Administrator" : "User"}
+                      </option>
+                    </select>
                   </div>
                 </div>
               </div>
