@@ -22,6 +22,17 @@ export default function UserAddressCard() {
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const handleChangeLogin = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (userData) {
+      setUserData({ ...userData, user: e.target.value });
+    }
+  };
+  const handleChangePassword = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (userData) {
+      setUserData({ ...userData, password: e.target.value });
+    }
+  };
 
   useEffect(() => {
     // Aquí se haría la llamada a la API para obtener los datos del usuario
@@ -65,8 +76,13 @@ export default function UserAddressCard() {
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
                   Password
                 </p>
-                <p className="text-sm font-medium text-gray-800 dark:text-white/90 cursor-pointer">
-                  {"*".repeat(userData?.password?.length || 8)}
+                <p
+                  className="text-sm font-medium text-gray-800 dark:text-white/90 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword
+                    ? userData?.password
+                    : "*".repeat(userData?.password?.length || 8)}
                 </p>
               </div>
             </div>
@@ -109,23 +125,26 @@ export default function UserAddressCard() {
             <div className="px-2 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
-                  <Label>Country</Label>
-                  <Input type="text" value="United States" />
+                  <Label>Login</Label>
+                  <Input type="text" value={userData?.user} onChange={handleChangeLogin} />
                 </div>
 
                 <div>
-                  <Label>City/State</Label>
-                  <Input type="text" value="Arizona, United States." />
-                </div>
-
-                <div>
-                  <Label>Postal Code</Label>
-                  <Input type="text" value="ERT 2489" />
-                </div>
-
-                <div>
-                  <Label>TAX ID</Label>
-                  <Input type="text" value="AS4568384" />
+                  <Label>Password</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={userData?.password}
+                      onChange={handleChangePassword}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
