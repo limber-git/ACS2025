@@ -34,7 +34,7 @@ pipeline {
 
         // --- Rutas de Despliegue en la VM CentOS 9 ---
         // Directorio base donde se desplegará tu aplicación en la VM
-        DEPLOY_BASE_DIR = '/var/www/my-simple-app'
+        DEPLOY_BASE_DIR = '/var/www/boletasweb'
     }
 
     // Define las diferentes etapas de tu pipeline.
@@ -44,7 +44,7 @@ pipeline {
             steps {
                 // Clonar el repositorio. Jenkins ya sabe qué repositorio y credenciales usar
                 // porque lo configuraste en el Job de Jenkins.
-                git branch: 'main', credentialsId: 'your-github-credentials-id', url: 'https://github.com/tu-usuario/tu-repositorio-simple.git'
+                git branch: 'main', url: 'https://github.com/limber-git/ACS2025.git'
                 // NOTA: 'your-github-credentials-id' es el ID que le diste a tus credenciales (ej. 'github-pat' o 'my-ssh-key')
                 // Si tu repo es público, puedes omitir 'credentialsId'.
                 // Asegúrate de usar la rama correcta (ej. 'main', 'master').
